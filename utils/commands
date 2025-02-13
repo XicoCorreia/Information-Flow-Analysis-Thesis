@@ -1,0 +1,19 @@
+*Run ebpf code
+sudo cat /sys/kernel/debug/tracing/trace_pipe | grep "BPF triggered sys_enter_write"
+sudo ./ecli run package.json
+./ecc minimal.bpf.c
+ 
+* Load ebpf code
+ clang -O2 -target bpf -c firstProg.c -o firstProg.o
+ sudo bpftool prog load firstProg.o /sys/fs/bpf/firstProg
+ 
+* Get opcodes
+sudo bpftool prog dump xlated id 494 opcodes
+
+* Turn opcodes into binary 
+xxd -p -r hex > bin
+
+
+* Get hex from bytecode
+hexdump myprog.o > myprog.txt
+xxd -p test.o > test2.txt

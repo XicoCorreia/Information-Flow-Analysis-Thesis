@@ -1,0 +1,29 @@
+cabal-version: 3.4
+name: ebpf-cfg
+version: 0.1.0.0
+synopsis: CFG and information flow analysis for eBPF programs
+homepage: https://github.com/kfl/ebpf-cfg
+license: MIT
+author: Ken Friis Larsen
+maintainer: kflarsen@di.ku.dk
+build-type: Simple
+
+common warnings
+    ghc-options: -Wall
+
+executable ebpf-cfg
+    import: warnings
+    main-is: Main.hs
+    other-modules:
+        Types
+        Equations
+        Analysis
+        Cfg
+    build-depends:
+        base >= 4.14 && < 5,
+        dom-lt,
+        containers,
+        ebpf-tools == 0.2.0.0,
+        text-display
+    hs-source-dirs: app
+    default-language: Haskell2010
