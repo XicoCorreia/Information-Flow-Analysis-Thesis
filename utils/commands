@@ -5,7 +5,8 @@ sudo ./ecli run package.json
  
 * Load ebpf code
  clang -O2 -target bpf -c firstProg.c -o firstProg.o
- sudo bpftool prog load firstProg.o /sys/fs/bpf/firstProg
+ sudo bpftool prog load firstProg.o /sys/fs/bpf/firstProg autoattach
+ sudo rm -rf /sys/fs/bpf/firstProg
  
 * Get opcodes
 sudo bpftool prog dump xlated id 494 opcodes

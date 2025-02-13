@@ -10,7 +10,7 @@ const pid_t pid_filter = 0;
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
-SEC("tp/syscalls/sys_enter_write")
+SEC("tracepoint/syscalls/sys_enter_write")
 int handle_tp(void *ctx)
 {
  pid_t pid = bpf_get_current_pid_tgid() >> 32;
