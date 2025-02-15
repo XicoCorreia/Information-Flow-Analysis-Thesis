@@ -1,6 +1,9 @@
 Programming tasks
-TODO - Handling all possible eBPF instructions in analysis & equations
-TODO - Handling all possible eBPF instructions in ebpf-tools decode
+- PART 1
+TODO - Handling all possible eBPF instructions in equations
+TODO - Handling all possible eBPF instructions in analysis
+TODO - Handling all possible eBPF instructions in ebpf-tools decode (Talk to Ken)
+- PART 2
 TODO - Improve memory modeling by combining interval analysis with information flow analysis.
 TODO - Recognize when non-sensitive data is first being assigned to registers
 
