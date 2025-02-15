@@ -1,0 +1,14 @@
+Programming tasks
+TODO - Handling all possible eBPF instructions in analysis & equations
+TODO - Handling all possible eBPF instructions in ebpf-tools decode
+TODO - Improve memory modeling by combining interval analysis with information flow analysis.
+TODO - Recognize when non-sensitive data is first being assigned to registers
+
+Testing tasks
+TODO - Testing with real-world eBPF programs 
+*DONE - Being capable of automatically transform ebpf program to asm and analyze it
+
+Mathematical and theoretical tasks
+TODO - Operational semantics
+TODO - Prove soundness and completeness
+?IN_PROGRESS - Find more related work and study it
