@@ -38,12 +38,13 @@ processElement :: Dom.Rooted -> State -> SystemState -> (Label, [(Label, Stmt)])
 processElement _ state (_, m, j) (_,[]) = (state, m, j)
 processElement graph state (states, mem, highContext) (currentNode, ((prevNode, stmt):es)) = otherState
   where 
-    dependsOnJump = isDependent prevNode (Set.toList highContext)
+    dependsOnJump = isInHighContext prevNode (Set.toList highContext)
     prevState = (states !! prevNode)
     (state',  mem', highContext') = updateUsingStmt graph prevState mem highContext dependsOnJump (prevNode, currentNode) stmt 
     newState = unionStt state state'
     otherState = processElement graph newState (states,  mem', highContext') (currentNode, es)
 
+-- TODO
 -- Update a node's state by analysing the security level of an equation, it also updates the context if the equation 
 -- is a conditional jump, i.e. if cond.
 updateUsingStmt :: Dom.Rooted -> State -> Memory -> HighSecurityContext -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityContext)
@@ -55,7 +56,7 @@ updateUsingStmt _ state mem highContext dependsOnJump _ (AssignReg r e) =
     secLevel = 
       if dependsOnJump 
         then High 
-        else processExpression state e
+        else processBinaryOp state e
     updatedState = updateRegisterSecurity r secLevel state
 updateUsingStmt _ state mem highContext dependsOnJump _ (AssignMem r e) = 
   case lookup r state of 
@@ -65,7 +66,7 @@ updateUsingStmt _ state mem highContext dependsOnJump _ (AssignMem r e) =
     secLevel = 
       if dependsOnJump 
         then High 
-        else processExpression state e
+        else processBinaryOp state e
     mem' = if mem == High then High else secLevel
 updateUsingStmt graph state mem highContext dependsOnJump (prevNode, _) (If cond _) =  
   if secLevelCond == High || dependsOnJump 
@@ -76,36 +77,59 @@ updateUsingStmt graph state mem highContext dependsOnJump (prevNode, _) (If cond
         Nothing -> (state, mem, highContext)
     else (state, mem, highContext)
   where
-    (e1, e2) = extractExpsFromCond cond
-    secLevelExp1 = processExpression state e1
-    secLevelExp2 = processExpression state e2
+    (r, ri) = extractFromCond cond
+    secLevelExp1 = processBinaryOp state r
+    secLevelExp2 = processBinaryOp state ri
     secLevelCond = if secLevelExp1 == Low && secLevelExp2 == Low then Low else High
 updateUsingStmt _ state mem highContext _ _ (Goto _) = (state, mem, highContext)  
 
+
+------------------- Functions related to processing different Stmt ------------------------
+
 -- Process an expression, returning the security level of the expression.
-processExpression :: State -> Exp -> SecurityLevel
-processExpression state  e = 
+processBinaryOp :: State -> BinaryOp -> SecurityLevel
+processBinaryOp state  e = 
   case e of 
-    Register r -> 
-      case lookup r state of
-            Just secLevel -> secLevel
-            Nothing -> error ("Not defined register: " ++ show r)
-    Const _ -> Low
-    AddOp e1 e2 -> processBinOp state e1 e2
-    SubOp e1 e2 -> processBinOp state e1 e2
-    MulOp e1 e2 -> processBinOp state e1 e2
-    DivOp e1 e2 -> processBinOp state e1 e2
-    ModOp e1 e2 -> processBinOp state e1 e2
-    AndOp e1 e2 -> processBinOp state e1 e2
-    OrOp e1 e2  -> processBinOp state e1 e2
+    AddOp r ri -> getBinOpSecurityLvl state r ri
+    SubOp r ri -> getBinOpSecurityLvl state r ri
+    MulOp r ri -> getBinOpSecurityLvl state r ri
+    DivOp r ri -> getBinOpSecurityLvl state r ri
+    OrOp  r ri -> getBinOpSecurityLvl state r ri
+    AndOp r ri -> getBinOpSecurityLvl state r ri
+    LshOp r ri -> getBinOpSecurityLvl state r ri
+    RshOp r ri -> getBinOpSecurityLvl state r ri
+    ModOp r ri -> getBinOpSecurityLvl state r ri
+    XorOp r ri -> getBinOpSecurityLvl state r ri
+    ArshOp r ri  -> getBinOpSecurityLvl state r ri
+    MovOp ri -> case ri of 
+      R r' -> getRegisterSecurityLevel state r'
+      Imm _ -> Low
+
+-- Extract the two expressions used in a Condition.
+extractFromCond :: Cond -> (Reg, RegImm)
+extractFromCond (Equal r ri)      = (r, ri)
+extractFromCond (NotEqual r ri)   = (r, ri)
+extractFromCond (LessThan r ri)   = (r, ri)
+extractFromCond (LessEqual r ri)  = (r, ri)
+extractFromCond (GreaterThan r ri)  = (r, ri) 
+extractFromCond (GreaterEqual r ri) = (r, ri)
+
+------------------- Functions related to states handling ------------------------
 
 -- Processes a binary operation by processing both expressions, returning the higher security level of both.
-processBinOp :: State -> Exp -> Exp -> SecurityLevel
-processBinOp state e1 e2 = 
-  let sec1 = processExpression state e1
-      sec2 = processExpression state e2
-      resultSecLevel = if sec1 == High || sec2 == High then High else Low
-      in resultSecLevel
+getBinOpSecurityLvl :: State -> Reg -> RegImm -> SecurityLevel
+getBinOpSecurityLvl state r ri = if sec1 == High || sec2 == High then High else Low
+  where
+    sec1 = getRegisterSecurityLevel state r
+    sec2 = case ri of 
+      R r' -> getRegisterSecurityLevel state r'
+      Imm _ -> Low
+
+-- Get the register sec level from the state
+getRegisterSecurityLevel :: State -> Reg -> SecurityLevel
+getRegisterSecurityLevel state r = case lookup r state of
+  Just s -> s
+  Nothing -> error ("Not defined register: " ++ show r)
 
 -- Update the register security in a state.
 updateRegisterSecurity :: Reg -> SecurityLevel -> State -> State
@@ -113,28 +137,21 @@ updateRegisterSecurity r secLevel = map (\(reg, sec) ->
     if reg == r 
         then (reg, secLevel)
         else (reg, sec))
-
--- Extract the two expressions used in a Condition.
-extractExpsFromCond :: Cond -> (Exp, Exp)
-extractExpsFromCond (Equal e1 e2)      = (e1, e2)
-extractExpsFromCond (NotEqual e1 e2)   = (e1, e2)
-extractExpsFromCond (LessThan e1 e2)   = (e1, e2)
-extractExpsFromCond (LessEqual e1 e2)  = (e1, e2)
-extractExpsFromCond (GreaterThan e1 e2)  = (e1, e2) 
-extractExpsFromCond (GreaterEqual e1 e2) = (e1, e2)
-
+  
 -- Union of two states.
 unionStt :: State -> State -> State
 unionStt = zipWith combine
   where
     combine (reg, sec1) (_, sec2) = (reg, if sec1 == High || sec2 == High then High else Low)
 
-isDependent :: Label -> [(Label, [Label])] -> Bool
-isDependent _ [] = False
-isDependent prevNode ((_,dependents):xs) = 
-  if prevNode `elem` dependents 
+------------------- Functions related to High Context ------------------------
+
+isInHighContext :: Label -> [(Label, [Label])] -> Bool
+isInHighContext _ [] = False
+isInHighContext prevNode ((_,nodes):xs) = 
+  if prevNode `elem` nodes 
     then True 
-    else isDependent prevNode xs
+    else isInHighContext prevNode xs
 
 -- Returns the nodes that belong to the high security context starting in the node
 -- containing the jump and ending in the immediate post dominator of that node.
