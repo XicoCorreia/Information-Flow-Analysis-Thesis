@@ -16,31 +16,50 @@ type LabeledProgram = [(Int, Instruction)]
 type CFG = Set (Label, Trans, Label)
 
 ------------------- Equations Types ------------------------
-data Exp =
-    Register Reg
-  | Const Int
-  | AddOp Exp Exp
-  | SubOp Exp Exp
-  | MulOp Exp Exp  
-  | DivOp Exp Exp  
-  | ModOp Exp Exp
-  | AndOp Exp Exp
-  | OrOp Exp Exp
 
+-- newtype Reg = Reg Int deriving (Eq, Show, Ord, Data)
+-- type Imm = Int64
+-- data RegImm = R Reg | Imm Imm deriving (Eq, Show, Ord, Data)
+-- type Offset = Int64
+-- type MemoryOffset = Offset
+
+data BinaryOp =
+    AddOp Reg RegImm
+  | SubOp Reg RegImm
+  | MulOp Reg RegImm 
+  | DivOp Reg RegImm
+  | OrOp  Reg RegImm
+  | AndOp Reg RegImm
+  | LshOp Reg RegImm
+  | RshOp Reg RegImm
+  | ModOp Reg RegImm
+  | XorOp Reg RegImm
+  | ArshOp Reg RegImm
+  | MovOp RegImm
+    deriving (Show)
+
+data UnaryOp = 
+    NegOp Reg
+  | LeOp Reg
+  | BeOp Reg
     deriving (Show)
 
 data Cond = 
-      Equal Exp Exp
-    | NotEqual Exp Exp
-    | LessThan Exp Exp
-    | LessEqual Exp Exp
-    | GreaterThan Exp Exp
-    | GreaterEqual Exp Exp
+      Equal Reg RegImm
+    | NotEqual Reg RegImm
+    | LessThan Reg RegImm
+    | LessEqual Reg RegImm
+    | GreaterThan Reg RegImm
+    | GreaterEqual Reg RegImm
     deriving (Show)
 
 data Stmt =
-    AssignReg Reg Exp
-  | AssignMem Reg Exp
+    AssignReg Reg BinaryOp
+  | ModifyReg Reg UnaryOp
+  | CallOp Int
+  | StoreInMem Reg (Maybe MemoryOffset) RegImm
+  | LoadFromMemReg Reg Reg (Maybe MemoryOffset)
+  | LoadFromMemImm Reg Imm 
   | If Cond Label
   | Goto Label
     deriving (Show)
