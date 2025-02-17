@@ -38,9 +38,9 @@ processElement :: Dom.Rooted -> State -> SystemState -> (Label, [(Label, Stmt)])
 processElement _ state (_, m, j) (_,[]) = (state, m, j)
 processElement graph state (states, mem, highContext) (currentNode, ((prevNode, stmt):es)) = otherState
   where 
-    dependsOnJump = isInHighContext prevNode (Set.toList highContext)
+    inHighContext = isInHighContext prevNode (Set.toList highContext)
     prevState = (states !! prevNode)
-    (state',  mem', highContext') = updateUsingStmt graph prevState mem highContext dependsOnJump (prevNode, currentNode) stmt 
+    (state',  mem', highContext') = updateUsingStmt graph prevState mem highContext inHighContext (prevNode, currentNode) stmt 
     newState = unionStt state state'
     otherState = processElement graph newState (states,  mem', highContext') (currentNode, es)
 
@@ -48,28 +48,44 @@ processElement graph state (states, mem, highContext) (currentNode, ((prevNode, 
 -- Update a node's state by analysing the security level of an equation, it also updates the context if the equation 
 -- is a conditional jump, i.e. if cond.
 updateUsingStmt :: Dom.Rooted -> State -> Memory -> HighSecurityContext -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityContext)
-updateUsingStmt _ state mem highContext dependsOnJump _ (AssignReg r e) = 
+-- Process Binary operations
+updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r e) = 
   case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (updatedState, mem, highContext)
   where 
-    secLevel = 
-      if dependsOnJump 
-        then High 
-        else processBinaryOp state e
+    secLevel = if inHighContext then High else processBinaryOp state e
     updatedState = updateRegisterSecurity r secLevel state
-updateUsingStmt _ state mem highContext dependsOnJump _ (AssignMem r e) = 
+
+-- Process Unary operations
+updateUsingStmt _ state mem highContext inHighContext _ (ModifyReg r e) = 
+    case lookup r state of 
+    Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
+    _ -> (updatedState, mem, highContext)
+  where 
+    updatedState = if inHighContext then updateRegisterSecurity r High state else state
+
+-- Process Store operations
+updateUsingStmt _ state mem highContext inHighContext _ (StoreInMem r _ ri) = 
   case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (state, mem', highContext)
   where
-    secLevel = 
-      if dependsOnJump 
-        then High 
-        else processBinaryOp state e
+    secLevel = if inHighContext then High else getRegisterImmSecurityLevel state ri
     mem' = if mem == High then High else secLevel
-updateUsingStmt graph state mem highContext dependsOnJump (prevNode, _) (If cond _) =  
-  if secLevelCond == High || dependsOnJump 
+
+-- Process Load operation with register as index
+updateUsingStmt _ state mem highContext inHighContext _ (LoadFromMemReg r1 r2 _) = undefined
+
+-- Process Load operation with Imm as index
+updateUsingStmt _ state mem highContext inHighContext _ (LoadFromMemImm r i) = undefined
+
+
+
+
+-- Process conditional jumps
+updateUsingStmt graph state mem highContext inHighContext (prevNode, _) (If cond _) =  
+  if secLevelCond == High || inHighContext 
     then 
       case find (\(n,_) -> n == prevNode) (ipdom graph) of
         Just (_, nodePD) -> 
@@ -78,10 +94,15 @@ updateUsingStmt graph state mem highContext dependsOnJump (prevNode, _) (If cond
     else (state, mem, highContext)
   where
     (r, ri) = extractFromCond cond
-    secLevelExp1 = processBinaryOp state r
-    secLevelExp2 = processBinaryOp state ri
+    secLevelExp1 = getRegisterSecurityLevel state r
+    secLevelExp2 = getRegisterImmSecurityLevel state ri
     secLevelCond = if secLevelExp1 == Low && secLevelExp2 == Low then Low else High
-updateUsingStmt _ state mem highContext _ _ (Goto _) = (state, mem, highContext)  
+
+-- Process Unconditional jump
+updateUsingStmt _ state mem highContext _ _ (Goto _) = (state, mem, highContext) 
+
+-- Process Call operation
+updateUsingStmt _ state mem highContext _ _ (CallOp _) = (state, mem, highContext)   
 
 
 ------------------- Functions related to processing different Stmt ------------------------
@@ -101,9 +122,7 @@ processBinaryOp state  e =
     ModOp r ri -> getBinOpSecurityLvl state r ri
     XorOp r ri -> getBinOpSecurityLvl state r ri
     ArshOp r ri  -> getBinOpSecurityLvl state r ri
-    MovOp ri -> case ri of 
-      R r' -> getRegisterSecurityLevel state r'
-      Imm _ -> Low
+    MovOp ri -> getRegisterImmSecurityLevel state ri
 
 -- Extract the two expressions used in a Condition.
 extractFromCond :: Cond -> (Reg, RegImm)
@@ -121,7 +140,11 @@ getBinOpSecurityLvl :: State -> Reg -> RegImm -> SecurityLevel
 getBinOpSecurityLvl state r ri = if sec1 == High || sec2 == High then High else Low
   where
     sec1 = getRegisterSecurityLevel state r
-    sec2 = case ri of 
+    sec2 = getRegisterImmSecurityLevel state ri
+
+-- Get the register sec level from the state
+getRegisterImmSecurityLevel :: State -> RegImm -> SecurityLevel
+getRegisterImmSecurityLevel state ri = case ri of 
       R r' -> getRegisterSecurityLevel state r'
       Imm _ -> Low
 
@@ -129,7 +152,7 @@ getBinOpSecurityLvl state r ri = if sec1 == High || sec2 == High then High else 
 getRegisterSecurityLevel :: State -> Reg -> SecurityLevel
 getRegisterSecurityLevel state r = case lookup r state of
   Just s -> s
-  Nothing -> error ("Not defined register: " ++ show r)
+  Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
 
 -- Update the register security in a state.
 updateRegisterSecurity :: Reg -> SecurityLevel -> State -> State

@@ -56,12 +56,12 @@ data Cond =
 data Stmt =
     AssignReg Reg BinaryOp
   | ModifyReg Reg UnaryOp
-  | CallOp Int
   | StoreInMem Reg (Maybe MemoryOffset) RegImm
   | LoadFromMemReg Reg Reg (Maybe MemoryOffset)
   | LoadFromMemImm Reg Imm 
   | If Cond Label
   | Goto Label
+  | CallOp Int
     deriving (Show)
 
 type Equations = Map Label [(Label, Stmt)]
