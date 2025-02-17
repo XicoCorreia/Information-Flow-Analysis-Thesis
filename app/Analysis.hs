@@ -9,6 +9,8 @@ import Data.Graph.Dom as Dom
 import Types
 import Ebpf.Asm
 
+------------------- Functions that perform the analysis at each program point ------------------------
+
 -- Perform a the information flow analysis on a set of equations.
 informationFlowAnalysis :: Dom.Rooted -> Equations -> State -> SystemState
 informationFlowAnalysis graph eq initialState =
@@ -44,7 +46,6 @@ processElement graph state (states, mem, highContext) (currentNode, ((prevNode, 
     newState = unionStt state state'
     otherState = processElement graph newState (states,  mem', highContext') (currentNode, es)
 
--- TODO
 -- Update a node's state by analysing the security level of an equation, it also updates the context if the equation 
 -- is a conditional jump, i.e. if cond.
 updateUsingStmt :: Dom.Rooted -> State -> Memory -> HighSecurityContext -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityContext)
@@ -58,7 +59,7 @@ updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r e) =
     updatedState = updateRegisterSecurity r secLevel state
 
 -- Process Unary operations
-updateUsingStmt _ state mem highContext inHighContext _ (ModifyReg r e) = 
+updateUsingStmt _ state mem highContext inHighContext _ (ModifyReg r _) = 
     case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (updatedState, mem, highContext)
@@ -75,13 +76,24 @@ updateUsingStmt _ state mem highContext inHighContext _ (StoreInMem r _ ri) =
     mem' = if mem == High then High else secLevel
 
 -- Process Load operation with register as index
-updateUsingStmt _ state mem highContext inHighContext _ (LoadFromMemReg r1 r2 _) = undefined
+updateUsingStmt _ state mem highContext inHighContext _ (LoadFromMemReg r r' _) =
+    case lookup r state of 
+    Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
+    _ -> case lookup r' state of 
+            Nothing -> error ("Register: " ++ show r' ++ " is not allowed to be used")
+            _ -> (updatedState, mem, highContext)
+  where
+    secLevel = if inHighContext then High else mem
+    updatedState = updateRegisterSecurity r secLevel state
 
 -- Process Load operation with Imm as index
-updateUsingStmt _ state mem highContext inHighContext _ (LoadFromMemImm r i) = undefined
-
-
-
+updateUsingStmt _ state mem highContext inHighContext _ (LoadFromMemImm r _) = 
+  case lookup r state of 
+    Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
+    _ -> (updatedState, mem, highContext)
+  where
+    secLevel = if inHighContext then High else mem
+    updatedState = updateRegisterSecurity r secLevel state
 
 -- Process conditional jumps
 updateUsingStmt graph state mem highContext inHighContext (prevNode, _) (If cond _) =  
