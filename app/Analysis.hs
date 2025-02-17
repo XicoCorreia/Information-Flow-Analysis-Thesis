@@ -19,32 +19,31 @@ informationFlowAnalysis graph eq initialState =
 -- Perform fixpoint computation for the analysis.
 fixpointComputation :: Dom.Rooted -> SystemState -> [(Label, [(Label, Stmt)])] -> SystemState 
 fixpointComputation graph ss eq = 
-  if ss == ss'
-    then ss'
-    else fixpointComputation graph ss' eq
-      where 
-        ss' = foldl (updateSystemState graph) ss eq
+  if ss == ss' then ss' else fixpointComputation graph ss' eq
+  where 
+    ss' = foldl (updateSystemState graph) ss eq
 
 -- This function updates the System state with a new state for the node being processed.
 updateSystemState :: Dom.Rooted -> SystemState -> (Label, [(Label, Stmt)]) -> SystemState
 updateSystemState graph (states, mem, highContext) (nodeIdx, eqs) = 
   (before ++ [state'] ++ after, mem', highContext')
   where
-    startState = states !! nodeIdx
-    (state', mem', highContext') = processElement graph startState (states, mem, highContext) (nodeIdx, eqs)
+    (state', mem', highContext') = processElement graph Nothing (states, mem, highContext) (nodeIdx, eqs)
     before = take nodeIdx states 
     after = drop (nodeIdx + 1) states
     
 -- Processes the equations for a specific node, returning the updated state.     
-processElement :: Dom.Rooted -> State -> SystemState -> (Label, [(Label, Stmt)]) -> (State, Memory, HighSecurityContext)
-processElement _ state (_, m, j) (_,[]) = (state, m, j)
-processElement graph state (states, mem, highContext) (currentNode, ((prevNode, stmt):es)) = otherState
+processElement :: Dom.Rooted -> Maybe State -> SystemState -> (Label, [(Label, Stmt)]) -> (State, Memory, HighSecurityContext)
+processElement _ (Nothing) (states, mem, highContext) (nodeIdx,[]) = ((states !! nodeIdx), mem, highContext)
+processElement _ (Just state) (_, mem, highContext) (_,[]) = (state, mem, highContext)
+processElement graph unionState (states, mem, highContext) (currentNode, ((prevNode, stmt):es)) =     
+  case unionState of
+      Nothing -> processElement graph (Just state) (states,  mem', highContext') (currentNode, es)
+      Just uState -> processElement graph (Just (unionStt uState state)) (states,  mem', highContext') (currentNode, es)
   where 
     inHighContext = isInHighContext prevNode (Set.toList highContext)
     prevState = (states !! prevNode)
-    (state',  mem', highContext') = updateUsingStmt graph prevState mem highContext inHighContext (prevNode, currentNode) stmt 
-    newState = unionStt state state'
-    otherState = processElement graph newState (states,  mem', highContext') (currentNode, es)
+    (state,  mem', highContext') = updateUsingStmt graph prevState mem highContext inHighContext (prevNode, currentNode) stmt 
 
 -- Update a node's state by analysing the security level of an equation, it also updates the context if the equation 
 -- is a conditional jump, i.e. if cond.
@@ -115,7 +114,6 @@ updateUsingStmt _ state mem highContext _ _ (Goto _) = (state, mem, highContext)
 
 -- Process Call operation
 updateUsingStmt _ state mem highContext _ _ (CallOp _) = (state, mem, highContext)   
-
 
 ------------------- Functions related to processing different Stmt ------------------------
 
