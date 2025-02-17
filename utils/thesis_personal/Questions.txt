@@ -1,4 +1,4 @@
-If index is high, should store be high
-Error with previous union with previous state case mov to private register
-In the case a jump is inside a high context, for exampl jeq r3 == 6, do I make r3 high? 
-And what if it is not inside an High security but is jeq r3 == highsecreg
+1. If index is high, should store be high, what if for load?
+2. Error with previous union with previous state case mov to private register
+3. In the case a jump is inside a high context, for exampl jeq r3 == 6, do I make r3 high? 
+4. What if it is not inside an High security but is jeq r3 == highsecretreg
