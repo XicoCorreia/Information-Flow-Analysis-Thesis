@@ -2,3 +2,4 @@
 2. In the case a jump is inside a high context, for exampl jeq r3 == 6, do I make r3 high? 
 3. What if it is not inside an High security but is jeq r3 == highsecretreg
 4. Should I start with Operational Semantics or Interval Analysis?
+5. Go through Report and see where it should changed
