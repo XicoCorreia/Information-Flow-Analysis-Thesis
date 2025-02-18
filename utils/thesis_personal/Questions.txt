@@ -1,5 +1,9 @@
-1. If index is high, should store be high, what if for load?
-2. In the case a jump is inside a high context, for exampl jeq r3 == 6, do I make r3 high? 
-3. What if it is not inside an High security but is jeq r3 == highsecretreg
-4. Should I start with Operational Semantics or Interval Analysis?
-5. Go through Report and see where it should changed
+1. If index is high, should store be high, what if for load? Both 
+  R: Both should by High (Good idea to redo the information flow challenge SOS)
+2. In the case a jump is inside a high context, for example jeq r3 == 6, do I make r3 high? 
+  R: No but check it formally
+3. Should I start with Inference rules/Type system or Interval Analysis?
+  R: Inference Rules - How an instruction evolve and change the state of security level (Explain each) 
+4. Go through Report and see where it should changed
+  R: Everything :)
+
