@@ -1,10 +1,10 @@
-module Equations (cfgToEquations, formatMap) where
+module IFA.Equations (cfgToEquations, formatMap) where
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.List (intercalate)
 
-import Types
+import IFA.Types
 import Ebpf.Asm as E
 
 -- Converts the edges of a Control Flow Graph (CFG) into a set of equations.

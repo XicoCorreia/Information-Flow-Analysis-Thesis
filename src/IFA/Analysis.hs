@@ -1,4 +1,4 @@
-module Analysis (informationFlowAnalysis) where
+module IFA.Analysis (informationFlowAnalysis) where
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -6,7 +6,7 @@ import Data.List (find)
 
 import Data.Graph.Dom as Dom
 
-import Types
+import IFA.Types
 import Ebpf.Asm
 
 ------------------- Functions that perform the analysis at each program point ------------------------

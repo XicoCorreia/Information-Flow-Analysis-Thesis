@@ -1,9 +1,9 @@
 module Main where
 
-import Types
-import Equations
-import Analysis
-import Cfg
+import IFA.Types
+import IFA.Equations
+import IFA.Analysis
+import IFA.Cfg
 
 import qualified System.Environment as Sys
 import qualified Data.Set as Set

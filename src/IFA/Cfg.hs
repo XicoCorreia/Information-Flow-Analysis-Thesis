@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Cfg (cfg, cfgToDot, dotPrelude, markHighContextNodes) where
+module IFA.Cfg (cfg, cfgToDot, dotPrelude, markHighContextNodes) where
 
-import Types
+import IFA.Types
 
 
 import qualified Data.Set as Set

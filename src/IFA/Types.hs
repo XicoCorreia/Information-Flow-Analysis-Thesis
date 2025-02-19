@@ -1,4 +1,4 @@
-module Types where
+module IFA.Types where
 
 import Data.Set as Set
 import Data.Map as Map
