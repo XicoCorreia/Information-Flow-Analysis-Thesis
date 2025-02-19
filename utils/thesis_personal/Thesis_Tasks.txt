@@ -8,9 +8,9 @@ TODO - Recognize when non-sensitive data is first being assigned to registers
 
 Testing tasks
 *DONE - Being capable of automatically transform ebpf program to asm and analyze it
+*DONE - Automatic sanity check testing
+*DONE - Makefile
 ?IN_PROGRESS - Testing with real-world eBPF programs 
-?IN_PROGRESS - Automatic sanity check testing
-?IN_PROGRESS - Makefile
 
 Mathematical and theoretical tasks
 ?IN_PROGRESS - Find more related work and study it
