@@ -49,4 +49,5 @@ test-suite test
     build-depends:
       tasty,
       tasty-hunit,
+      dom-lt,
       ebpf-cfg

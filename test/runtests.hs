@@ -2,9 +2,9 @@ import ControlFlowTest
 import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
-main =
+main = 
   defaultMain $
     testGroup
-      "APL"
-      [ ControlFlowTest.tests
+      "Analysis tests"
+      [ ControlFlowTest.tests 
       ]
