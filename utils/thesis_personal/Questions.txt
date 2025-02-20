@@ -10,4 +10,5 @@
   R: Inference Rules - How an instruction evolve and change the state of security level (Explain each) 
 4. Go through Report and see where it should changed
   R: Everything :)
-
+--------------------------
+1. When loading a value to a register we can also decrease the security value like a mov op?

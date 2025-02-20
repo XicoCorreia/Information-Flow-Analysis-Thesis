@@ -71,7 +71,8 @@ updateUsingStmt _ state mem highContext inHighContext _ (StoreInMem r _ ri) =
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (state, mem', highContext)
   where
-    secLevel = if inHighContext then High else getRegisterImmSecurityLevel state ri
+    secLevelIdx = if inHighContext then High else getRegisterSecurityLevel state r
+    secLevel = if secLevelIdx == High then High else getRegisterImmSecurityLevel state ri
     mem' = if mem == High then High else secLevel
 
 -- Process Load operation with register as index
@@ -82,7 +83,8 @@ updateUsingStmt _ state mem highContext inHighContext _ (LoadFromMemReg r r' _) 
             Nothing -> error ("Register: " ++ show r' ++ " is not allowed to be used")
             _ -> (updatedState, mem, highContext)
   where
-    secLevel = if inHighContext then High else mem
+    secLevelIdx = if inHighContext then High else getRegisterSecurityLevel state r'
+    secLevel = if mem == High then High else secLevelIdx
     updatedState = updateRegisterSecurity r secLevel state
 
 -- Process Load operation with Imm as index
