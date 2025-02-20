@@ -1,5 +1,9 @@
 1. If index is high, should store be high, what if for load? Both 
   R: Both should by High (Good idea to redo the information flow challenge SOS)
+  declare array x : low ;
+  x[h]=true; -> Shouldnt be allowed to used high idx
+  l=x[true]; -> this is fine
+  Using high as index reveals the secret
 2. In the case a jump is inside a high context, for example jeq r3 == 6, do I make r3 high? 
   R: No but check it formally
 3. Should I start with Inference rules/Type system or Interval Analysis?
