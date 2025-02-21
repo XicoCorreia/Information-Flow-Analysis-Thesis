@@ -7,9 +7,12 @@ TODO - Improve memory modeling by combining interval analysis with information f
 TODO - Recognize when non-sensitive data is first being assigned to registers
 
 Testing tasks
+- PART 1
 *DONE - Being capable of automatically transform ebpf program to asm and analyze it
 *DONE - Automatic sanity check testing
 *DONE - Makefile
+*DONE - Learn how to use ubpf
+- PART 2
 TODO - Testing with real-world eBPF programs 
 
 Mathematical and theoretical tasks
