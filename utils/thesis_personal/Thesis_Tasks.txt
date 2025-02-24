@@ -18,6 +18,6 @@ TODO - Testing with real-world eBPF programs
 Mathematical and theoretical tasks
 *DONE - Find more related work and study it
 ?IN_PROGRESS - Typing system/Inference rules
-TODO - Finish Report sections
+?IN_PROGRESS - Finish Report sections
 TODO - Prove soundness and completeness
 TODO - Define Attacker model
