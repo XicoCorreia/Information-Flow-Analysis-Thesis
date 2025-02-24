@@ -12,3 +12,8 @@
   R: Everything :)
 --------------------------
 1. When loading a value to a register we can also decrease the security value like a mov op?
+R: Correct
+change movop to stmt
+rule for reg
+upate mem to be only 1
+Prepare comparision between type rules and haskell implement
