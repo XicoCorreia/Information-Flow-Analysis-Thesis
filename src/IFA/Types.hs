@@ -59,7 +59,7 @@ data Condition =
     deriving (Show)
 
 data Stmt =
-    AssignReg Reg Expression
+    AssignReg Reg Exp
   | StoreInMem Reg (Maybe MemoryOffset) RegImm
   | LoadFromMemReg Reg Reg (Maybe MemoryOffset)
   | LoadFromMemImm Reg Imm 
