@@ -23,6 +23,12 @@ type CFG = Set (Label, Trans, Label)
 -- type Offset = Int64
 -- type MemoryOffset = Offset
 
+data Expression =
+    Bin BinaryOp
+  | Un UnaryOp
+  | Mv RegImm
+    deriving (Show)
+
 data BinaryOp =
     AddOp Reg RegImm
   | SubOp Reg RegImm
@@ -35,7 +41,6 @@ data BinaryOp =
   | ModOp Reg RegImm
   | XorOp Reg RegImm
   | ArshOp Reg RegImm
-  | MovOp RegImm
     deriving (Show)
 
 data UnaryOp = 
@@ -44,7 +49,7 @@ data UnaryOp =
   | BeOp Reg
     deriving (Show)
 
-data Cond = 
+data Condition = 
       Equal Reg RegImm
     | NotEqual Reg RegImm
     | LessThan Reg RegImm
@@ -54,12 +59,11 @@ data Cond =
     deriving (Show)
 
 data Stmt =
-    AssignReg Reg BinaryOp
-  | ModifyReg Reg UnaryOp
+    AssignReg Reg Expression
   | StoreInMem Reg (Maybe MemoryOffset) RegImm
   | LoadFromMemReg Reg Reg (Maybe MemoryOffset)
   | LoadFromMemImm Reg Imm 
-  | If Cond Label
+  | If Condition Label
   | Goto Label
   | CallOp Int
     deriving (Show)

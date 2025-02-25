@@ -19,7 +19,7 @@ edgeToEquation (from, Assert cmp r ir, to) = addEquation from to (If (assertToCo
 edgeToEquation (from, Unconditional, to) = addEquation from to (Goto to)
 
 -- Converts a conditional jump (Jcmp) into an appropriate condition (Cond).
-assertToCond :: Jcmp -> Reg -> RegImm -> Cond
+assertToCond :: Jcmp -> Reg -> RegImm -> Condition
 assertToCond cmp r ri = case cmp of
   Jeq -> Equal r ri
   Jne -> NotEqual r ri
@@ -35,7 +35,8 @@ assertToCond cmp r ri = case cmp of
 
 -- Converts a given instruction (e.g., binary operation, store) into an equivalent statement (Stmt).
 opToStmt :: Instruction -> Stmt
-opToStmt (Binary _ op r ri) = AssignReg r $ case op of
+opToStmt (Binary _ Mov r ri) = AssignReg r (Mv ri)
+opToStmt (Binary _ op r ri) = AssignReg r $ Bin $ case op of
   Add -> AddOp r ri
   Sub -> SubOp r ri
   Mul -> MulOp r ri
@@ -47,8 +48,7 @@ opToStmt (Binary _ op r ri) = AssignReg r $ case op of
   Mod -> ModOp r ri
   Xor -> XorOp r ri
   Arsh -> ArshOp r ri
-  Mov -> MovOp ri
-opToStmt (Unary _ op r) = ModifyReg r $ case op of
+opToStmt (Unary _ op r) = AssignReg r $ Un $ case op of
   Neg -> NegOp r
   Le -> LeOp r
   Be -> BeOp r

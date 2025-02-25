@@ -49,7 +49,7 @@ processElement graph unionState (states, mem, highContext) (currentNode, ((prevN
 -- is a conditional jump, i.e. if cond.
 updateUsingStmt :: Dom.Rooted -> State -> Memory -> HighSecurityContext -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityContext)
 -- Process Binary operations
-updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r e) = 
+updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r (Bin e)) = 
   case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (updatedState, mem, highContext)
@@ -58,12 +58,22 @@ updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r e) =
     updatedState = updateRegisterSecurity r secLevel state
 
 -- Process Unary operations
-updateUsingStmt _ state mem highContext inHighContext _ (ModifyReg r _) = 
+updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r (Un e)) = 
     case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (updatedState, mem, highContext)
   where 
-    updatedState = if inHighContext then updateRegisterSecurity r High state else state
+    secLevel = if inHighContext then High else processUnaryOp state e
+    updatedState = updateRegisterSecurity r secLevel state
+
+-- Process Mov operation
+updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r (Mv ri)) = 
+  case lookup r state of 
+    Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
+    _ -> (updatedState, mem, highContext)
+  where 
+    secLevel = if inHighContext then High else getRegisterImmSecurityLevel state ri
+    updatedState = updateRegisterSecurity r secLevel state
 
 -- Process Store operations
 updateUsingStmt _ state mem highContext inHighContext _ (StoreInMem r _ ri) = 
@@ -121,7 +131,7 @@ updateUsingStmt _ state mem highContext _ _ (CallOp _) = (state, mem, highContex
 
 -- Process an expression, returning the security level of the expression.
 processBinaryOp :: State -> BinaryOp -> SecurityLevel
-processBinaryOp state  e = 
+processBinaryOp state e = 
   case e of 
     AddOp r ri -> getBinOpSecurityLvl state r ri
     SubOp r ri -> getBinOpSecurityLvl state r ri
@@ -133,15 +143,21 @@ processBinaryOp state  e =
     RshOp r ri -> getBinOpSecurityLvl state r ri
     ModOp r ri -> getBinOpSecurityLvl state r ri
     XorOp r ri -> getBinOpSecurityLvl state r ri
-    ArshOp r ri  -> getBinOpSecurityLvl state r ri
-    MovOp ri -> getRegisterImmSecurityLevel state ri
+    ArshOp r ri -> getBinOpSecurityLvl state r ri
+
+processUnaryOp :: State -> UnaryOp -> SecurityLevel
+processUnaryOp state e = 
+  case e of 
+    NegOp r -> getRegisterSecurityLevel state r 
+    LeOp r -> getRegisterSecurityLevel state r 
+    BeOp r -> getRegisterSecurityLevel state r 
 
 -- Extract the two expressions used in a Condition.
-extractFromCond :: Cond -> (Reg, RegImm)
-extractFromCond (Equal r ri)      = (r, ri)
-extractFromCond (NotEqual r ri)   = (r, ri)
-extractFromCond (LessThan r ri)   = (r, ri)
-extractFromCond (LessEqual r ri)  = (r, ri)
+extractFromCond :: Condition -> (Reg, RegImm)
+extractFromCond (Equal r ri)        = (r, ri)
+extractFromCond (NotEqual r ri)     = (r, ri)
+extractFromCond (LessThan r ri)     = (r, ri)
+extractFromCond (LessEqual r ri)    = (r, ri)
 extractFromCond (GreaterThan r ri)  = (r, ri) 
 extractFromCond (GreaterEqual r ri) = (r, ri)
 
