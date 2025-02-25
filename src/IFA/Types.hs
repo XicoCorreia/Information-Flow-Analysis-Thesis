@@ -23,7 +23,7 @@ type CFG = Set (Label, Trans, Label)
 -- type Offset = Int64
 -- type MemoryOffset = Offset
 
-data Expression =
+data Exp =
     Bin BinaryExp
   | Un UnaryExp
   | Mv RegImm
