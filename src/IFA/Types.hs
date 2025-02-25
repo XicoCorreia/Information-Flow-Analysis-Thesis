@@ -24,12 +24,12 @@ type CFG = Set (Label, Trans, Label)
 -- type MemoryOffset = Offset
 
 data Expression =
-    Bin BinaryOp
-  | Un UnaryOp
+    Bin BinaryExp
+  | Un UnaryExp
   | Mv RegImm
     deriving (Show)
 
-data BinaryOp =
+data BinaryExp =
     AddOp Reg RegImm
   | SubOp Reg RegImm
   | MulOp Reg RegImm 
@@ -43,7 +43,7 @@ data BinaryOp =
   | ArshOp Reg RegImm
     deriving (Show)
 
-data UnaryOp = 
+data UnaryExp = 
     NegOp Reg
   | LeOp Reg
   | BeOp Reg
