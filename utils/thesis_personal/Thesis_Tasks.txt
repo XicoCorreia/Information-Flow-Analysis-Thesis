@@ -3,7 +3,7 @@ Programming tasks
 *DONE - Handling all possible eBPF instructions in equations
 *DONE - Handling all possible eBPF instructions in analysis
 - PART 2
-TODO - Improve memory modeling by combining interval analysis with information flow analysis.
+?IN_PROGRESS - Improve memory modeling by combining interval analysis with information flow analysis.
 TODO - Recognize when non-sensitive data is first being assigned to registers
 
 Testing tasks
@@ -13,11 +13,13 @@ Testing tasks
 *DONE - Makefile
 *DONE - Learn how to use ubpf
 - PART 2
-TODO - Testing with real-world eBPF programs 
+?IN_PROGRESS - Testing with real-world eBPF programs 
 
 Mathematical and theoretical tasks
-*DONE - Find more related work and study it
+- PART 1
+?IN_PROGRESS - Find more related work and study it
 ?IN_PROGRESS - Typing system/Inference rules
 ?IN_PROGRESS - Finish Report sections
+- PART 2
 TODO - Prove soundness and completeness
 TODO - Define Attacker model
