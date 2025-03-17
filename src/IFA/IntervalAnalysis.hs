@@ -129,6 +129,7 @@ eqInterval x y = (intersectionInterval x y, intersectionInterval x y)
 noteqInterval :: Interval -> Interval -> (Interval, Interval)
 noteqInterval _ _ = undefined
 
+-- TODO 
 ltInterval :: Interval -> Interval -> (Interval, Interval)
 ltInterval EmptyItv _ = (EmptyItv, EmptyItv)
 ltInterval _ EmptyItv = (EmptyItv, EmptyItv)
@@ -147,6 +148,7 @@ ltInterval (Itv (NegInfinity,x2)) (Itv (y1,PosInfinity)) =
 -- case when 1 of the intervals is not correctly formatted
 ltInterval x y = ltInterval (normalizeInterval x) (normalizeInterval y)
 
+-- TODO 
 leqInterval :: Interval -> Interval -> (Interval, Interval)
 leqInterval EmptyItv _ = (EmptyItv, EmptyItv)
 leqInterval _ EmptyItv = (EmptyItv, EmptyItv)
@@ -186,7 +188,7 @@ initialStateItv = [
     (Reg 6, EmptyItv), (Reg 7, EmptyItv), (Reg 8, EmptyItv), 
     (Reg 9, EmptyItv), (Reg 10, EmptyItv)]
 
--- ItvState operations 
+-- ! Could be an issue 
 unionStt :: ItvState -> ItvState -> ItvState
 unionStt [] s2 = s2 -- When one is empty the other one is returned 
 unionStt s1 [] = s1
@@ -203,18 +205,6 @@ unionStt s1 s2 =
   in
     mergeItvState s1 [] ++ remainingS2
 
--- TODO ? 
-combineNewPrev :: ItvState -> ItvState -> ItvState
-combineNewPrev [] s2 = s2 -- When one is empty the other one is returned 
-combineNewPrev s1 [] = s1
-combineNewPrev s1 s2 = s1 ++ (filter (\(v2, _) -> v2 `notElem` map fst s1) s2)
-
-
-
-
-
-
-
 ------------------- Interval Analysis ------------------------
 
 intervalAnalysis :: Equations -> [ItvState]
@@ -229,7 +219,6 @@ fixpointItvAnalysis eq state =
         where 
             newState = foldl updateItvState state eq
 
-
 updateItvState :: [ItvState] -> (Label, [(Label, Stmt)]) -> [ItvState]
 updateItvState state (nodeIdx, eqs) = 
   before ++ [state'] ++ after
@@ -237,7 +226,6 @@ updateItvState state (nodeIdx, eqs) =
     state' = processItvElement Nothing state (nodeIdx, eqs)
     before = take nodeIdx state 
     after = drop (nodeIdx + 1) state
-
 
 processItvElement :: Maybe ItvState -> [ItvState] -> (Label, [(Label, Stmt)]) -> ItvState
 processItvElement (Nothing) states (nodeIdx,[]) = states !! nodeIdx
@@ -249,7 +237,8 @@ processItvElement unionState states (currentNode, ((prevNode, stmt):es)) =
   where 
     prevState = (states !! prevNode)
     state = updateItvUsingStmt prevState stmt 
--- TODO 
+
+
 updateItvUsingStmt :: ItvState -> Stmt -> ItvState
 updateItvUsingStmt state (AssignReg r (Mv ri)) =
     case lookup r state of 
@@ -258,15 +247,44 @@ updateItvUsingStmt state (AssignReg r (Mv ri)) =
     where 
         newValue = registerImmediateToInterval state ri
         state' = updateRegisterValue r newValue state
-updateItvUsingStmt s _ = s
+-- TODO 
+updateItvUsingStmt state (AssignReg r (Bin e)) = undefined
+-- TODO 
+updateItvUsingStmt state (AssignReg r (Un e)) = undefined
+
+-- TODO  Memory Handling
+updateItvUsingStmt state (StoreInMem r offset ri) = undefined
+updateItvUsingStmt state (LoadFromMemReg r r' offset) = undefined
+updateItvUsingStmt state (LoadFromMemImm r i) = undefined
+
+-- TODO 
+updateItvUsingStmt state (If cond _) = processCondition state cond
+updateItvUsingStmt state (CallOp _) = state
+updateItvUsingStmt state (Goto _) = state
+
 
 
 ------------- Functions related to states handling ------------------------
+-- TODO
+processCondition :: ItvState -> Condition -> ItvState
+processCondition state e = 
+  case e of 
+    Equal r ri -> state'  
+      where 
+        constraint = registerImmediateToInterval state ri
+        regValue = getRegisterInterval state r
+        newVal = intersectionInterval regValue constraint
+        state' = updateRegisterValue r newVal state
+    NotEqual r ri -> undefined
+    LessThan r ri -> undefined
+    LessEqual r ri -> undefined
+    GreaterThan r ri -> undefined
+    GreaterEqual r ri -> undefined
 
 registerImmediateToInterval :: ItvState -> RegImm -> Interval
 registerImmediateToInterval state ri = case ri of 
       R r' -> getRegisterInterval state r'
-      Imm n -> Itv (Finite (fromIntegral n), Finite (fromIntegral n))
+      Imm n -> constantInterval (fromIntegral n)
 
 getRegisterInterval :: ItvState -> Reg -> Interval
 getRegisterInterval s r =   

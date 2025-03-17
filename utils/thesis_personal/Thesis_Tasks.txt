@@ -17,9 +17,10 @@ Testing tasks
 
 Mathematical and theoretical tasks
 - PART 1
-?IN_PROGRESS - Find more related work and study it
-?IN_PROGRESS - Typing system/Inference rules
-?IN_PROGRESS - Finish Report sections
+*DONE - Find more related work and study it
+*DONE - Typing system/Inference rules
+*DONE - Finish basic Report sections
 - PART 2
+TODO - Typing system/Inference rules for extended system
 TODO - Prove soundness and completeness
 TODO - Define Attacker model
