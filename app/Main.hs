@@ -4,6 +4,7 @@ import IFA.Types
 import IFA.Equations
 import IFA.Analysis
 import IFA.Cfg
+import IFA.IntervalAnalysis
 
 import qualified System.Environment as Sys
 import qualified Data.Set as Set
@@ -53,11 +54,31 @@ main :: IO ()
 main = do
   args <- Sys.getArgs
   if length args < 2
-    then do   
-      -- Case where there is not enough arguments    
-      putStrLn "Usage:"
-      putStrLn "- Run information flow analysis and visualize cfg:\n <EBPF_FILE> <DOT_FILE> [secret1 secret2]"
-      putStrLn "- Example: cabal run ebpf-cfg -- examples/doWhile.asm graphs/doWhile.dot r1 r2 r3"
+    then 
+      -- Run interval analysis
+      if length args == 1 
+        then do   
+          res <- parseFromFile (args !! 0)
+          case res of
+            -- Case where there is an error parsing the program
+            Left err -> do
+              putStrLn "Some sort of error occurred while parsing:"
+              print err
+            -- Create CFG, equations and run the interval analysis
+            Right prog -> 
+              let 
+                cfg' = cfg prog
+                equations = cfgToEquations cfg' (Map.empty)
+                itv = intervalAnalysis equations
+              in do
+                printf "\nFinal states:\n"  
+                mapM_  (\(index,lst) -> putStrLn (show index ++ ": " ++ show lst)) 
+                  (zip ([0..] :: [Int]) itv) 
+        else do
+          -- Case where there is not enough arguments    
+          putStrLn "Usage:"
+          putStrLn "- Run information flow analysis and visualize cfg:\n <EBPF_FILE> <DOT_FILE> [secret1 secret2]"
+          putStrLn "- Example: cabal run ebpf-cfg -- examples/doWhile.asm graphs/doWhile.dot r1 r2 r3"
     else
       -- Get arguments
       let ebpfFile = args !! 0

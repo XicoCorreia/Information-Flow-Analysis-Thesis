@@ -1,4 +1,4 @@
-module IFA.IntervalAnalysis where
+module IFA.IntervalAnalysis (intervalAnalysis) where
 
 import qualified Data.Map as Map
 
@@ -179,6 +179,13 @@ narrowingInterval (Itv (x1,x2)) (Itv (y1, y2)) =
 
 type ItvState = [(Reg, Interval)]
 
+initialStateItv :: ItvState
+initialStateItv = [
+    (Reg 0, EmptyItv), (Reg 1, EmptyItv), (Reg 2, EmptyItv), 
+    (Reg 3, EmptyItv), (Reg 4, EmptyItv), (Reg 5, EmptyItv), 
+    (Reg 6, EmptyItv), (Reg 7, EmptyItv), (Reg 8, EmptyItv), 
+    (Reg 9, EmptyItv), (Reg 10, EmptyItv)]
+
 -- ItvState operations 
 unionStt :: ItvState -> ItvState -> ItvState
 unionStt [] s2 = s2 -- When one is empty the other one is returned 
@@ -214,7 +221,7 @@ intervalAnalysis :: Equations -> [ItvState]
 intervalAnalysis eq = fixpointItvAnalysis eqList state
     where
         eqList = Map.toList eq 
-        state = replicate (length eqList) [] 
+        state = replicate (length eqList) initialStateItv
 
 fixpointItvAnalysis :: [(Label, [(Label, Stmt)])] -> [ItvState] -> [ItvState]
 fixpointItvAnalysis eq state =
@@ -244,14 +251,14 @@ processItvElement unionState states (currentNode, ((prevNode, stmt):es)) =
     state = updateItvUsingStmt prevState stmt 
 -- TODO 
 updateItvUsingStmt :: ItvState -> Stmt -> ItvState
-updateItvUsingStmt state (AssignReg r (Mv ri)) = 
+updateItvUsingStmt state (AssignReg r (Mv ri)) =
     case lookup r state of 
-    Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
-    _ -> state'
-  where 
-    newValue = registerImmediateToInterval state ri
-    state' = updateRegisterValue r newValue state
-updateItvUsingStmt _ _ = undefined
+        Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
+        _ -> state'
+    where 
+        newValue = registerImmediateToInterval state ri
+        state' = updateRegisterValue r newValue state
+updateItvUsingStmt s _ = s
 
 
 ------------- Functions related to states handling ------------------------
@@ -265,7 +272,7 @@ getRegisterInterval :: ItvState -> Reg -> Interval
 getRegisterInterval s r =   
     case lookup r s of
         Just itv -> itv 
-        Nothing -> EmptyItv
+        Nothing -> error "Register not found in state"
 
 updateRegisterValue :: Reg -> Interval -> ItvState -> ItvState
 updateRegisterValue r itv = map (\(reg, i) -> 
