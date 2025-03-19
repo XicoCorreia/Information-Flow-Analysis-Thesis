@@ -118,46 +118,46 @@ subInterval (Itv (_, PosInfinity)) (Itv (_, PosInfinity)) = Itv (NegInfinity, Po
 -- case when 1 of the intervals is not correctly formatted
 subInterval x y = subInterval (normalizeInterval x) (normalizeInterval y)
 
--- TODO Mul not implemented
-mulInterval :: Interval -> Interval -> Interval
-mulInterval _ _ = undefined
-
--- TODO Div not implemented
-divInterval :: Interval -> Interval -> Interval
-divInterval _ _ = undefined
-
 ------------------- Logical Interval Operations ------------------------
 
 eqInterval :: Interval -> Interval -> (Interval, Interval)
 eqInterval x y = (intersectionInterval x y, intersectionInterval x y)
 
--- TODO 
 ltInterval :: Interval -> Interval -> (Interval, Interval)
 ltInterval EmptyItv _ = (EmptyItv, EmptyItv)
 ltInterval _ EmptyItv = (EmptyItv, EmptyItv)
+-- (x1,_) < (_,y1)
 ltInterval (Itv (Finite x1,x2)) (Itv (y1,Finite y2)) = 
-  (intersectionInterval (Itv (Finite x1,x2)) (Itv (NegInfinity, Finite (y2-1))),
-   intersectionInterval (Itv (Finite (x1 + 1),x2)) (Itv (y1,Finite y2)))
-ltInterval (Itv (NegInfinity,x2)) (Itv (y1,Finite y2)) = 
-  (intersectionInterval (Itv (NegInfinity,x2)) (Itv (NegInfinity, Finite (y2-1))),
-   intersectionInterval (Itv (NegInfinity,x2)) (Itv (y1,Finite y2)))
+  (intersectionInterval (Itv (Finite x1, x2)) (Itv (NegInfinity, Finite (y2-1))),
+   intersectionInterval (Itv (Finite (x1 + 1), PosInfinity)) (Itv (y1, Finite y2)))
+-- (x1,_) < (_,+inf)
 ltInterval (Itv (Finite x1,x2)) (Itv (y1,PosInfinity)) = 
-  (intersectionInterval (Itv (Finite x1,x2)) (Itv (NegInfinity, PosInfinity)),
-   intersectionInterval (Itv (Finite (x1 + 1),x2)) (Itv (y1, PosInfinity)))
+  (intersectionInterval (Itv (Finite x1, x2)) (Itv (NegInfinity, PosInfinity)),
+   intersectionInterval (Itv (Finite (x1 + 1), PosInfinity)) (Itv (y1, PosInfinity)))
+-- (-inf,_) < (_,y1)
+ltInterval (Itv (NegInfinity,x2)) (Itv (y1,Finite y2)) = 
+  (intersectionInterval (Itv (NegInfinity, x2)) (Itv (NegInfinity, Finite (y2-1))),
+   intersectionInterval (Itv (NegInfinity, PosInfinity)) (Itv (y1, Finite y2)))
+-- (-inf,_) < (_,+inf)
 ltInterval (Itv (NegInfinity,x2)) (Itv (y1,PosInfinity)) = 
-  (intersectionInterval (Itv (NegInfinity,x2)) (Itv (NegInfinity, PosInfinity)),
-   intersectionInterval (Itv (NegInfinity,x2)) (Itv (y1, PosInfinity)))
+  (intersectionInterval (Itv (NegInfinity, x2)) (Itv (NegInfinity, PosInfinity)),
+   intersectionInterval (Itv (NegInfinity, PosInfinity)) (Itv (y1, PosInfinity)))
 -- case when 1 of the intervals is not correctly formatted
 ltInterval x y = ltInterval (normalizeInterval x) (normalizeInterval y)
 
--- TODO 
 leqInterval :: Interval -> Interval -> (Interval, Interval)
-leqInterval EmptyItv _ = (EmptyItv, EmptyItv)
-leqInterval _ EmptyItv = (EmptyItv, EmptyItv)
-leqInterval (Itv (x1,x2)) (Itv (y1,y2)) = 
+leqInterval itv1 itv2 = leqInterval' itv1' itv2'
+  where 
+    itv1' = normalizeInterval itv1
+    itv2' = normalizeInterval itv2
+
+leqInterval' :: Interval -> Interval -> (Interval, Interval)
+leqInterval' EmptyItv _ = (EmptyItv, EmptyItv)
+leqInterval' _ EmptyItv = (EmptyItv, EmptyItv)
+leqInterval' (Itv (x1,x2)) (Itv (y1,y2)) = 
    (intersectionInterval (Itv (x1,x2)) (Itv (NegInfinity, y2)),
    intersectionInterval (Itv (x1,PosInfinity)) (Itv (y1,y2)))
--- There is no bad format case this time, can be an issue
+
 
 ------------------- Widening & Narrowing ------------------------
 
