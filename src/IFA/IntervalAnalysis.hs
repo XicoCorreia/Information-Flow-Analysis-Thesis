@@ -38,33 +38,39 @@ data Interval =
 ------------------- Interval Operations ------------------------
 
 unionInterval :: Interval -> Interval -> Interval
-unionInterval (Itv (NegInfinity, PosInfinity)) _ = Itv (NegInfinity, PosInfinity)  
-unionInterval _ (Itv (NegInfinity, PosInfinity)) = Itv (NegInfinity, PosInfinity)
 unionInterval EmptyItv x = x
 unionInterval x EmptyItv = x
-unionInterval (Itv (NegInfinity, Finite x)) (Itv (NegInfinity, Finite y)) = Itv (NegInfinity, Finite (max x y))
-unionInterval (Itv (NegInfinity, _)) (Itv (_, PosInfinity)) = Itv (NegInfinity, PosInfinity)
-unionInterval (Itv (NegInfinity, Finite x2)) (Itv (_, Finite y2)) = Itv (NegInfinity, Finite (max x2 y2))
-unionInterval (Itv (_, PosInfinity)) (Itv (NegInfinity, _)) = Itv (NegInfinity, PosInfinity)
-unionInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (min x1 y1), PosInfinity)
+-- (-inf, +inf)
+unionInterval (Itv (NegInfinity, PosInfinity)) _ = Itv (NegInfinity, PosInfinity)  
+-- (-inf,x)
+unionInterval (Itv (NegInfinity, Finite _)) (Itv (_, PosInfinity)) = Itv (NegInfinity, PosInfinity)
+unionInterval (Itv (NegInfinity, Finite x)) (Itv (_, Finite y)) = Itv (NegInfinity, Finite (max x y))
+-- (x,+inf)
 unionInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, _)) = Itv (Finite (min x1 y1), PosInfinity)
-unionInterval (Itv (_, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (max x2 y2))
-unionInterval (Itv (Finite x1, _)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (min x1 y1), PosInfinity)
+unionInterval (Itv (Finite _, PosInfinity)) (Itv (NegInfinity, _)) = Itv (NegInfinity, PosInfinity)
+-- (x1, x2)
 unionInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (min x1 y1), Finite (max x2 y2))
+unionInterval (Itv (Finite _, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (max x2 y2))
+unionInterval (Itv (Finite x1, Finite _)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (min x1 y1), PosInfinity)
+unionInterval (Itv (Finite _, Finite _)) (Itv (NegInfinity, PosInfinity)) = Itv (NegInfinity, PosInfinity)  
 -- case when 1 of the intervals is not correctly formatted
 unionInterval x y = unionInterval (normalizeInterval x) (normalizeInterval y)
 
 intersectionInterval :: Interval -> Interval -> Interval
-intersectionInterval (Itv (NegInfinity, PosInfinity)) x = x
-intersectionInterval x (Itv (NegInfinity, PosInfinity)) = x
 intersectionInterval EmptyItv _ = EmptyItv
 intersectionInterval _ EmptyItv = EmptyItv
+-- (-inf, +inf)
+intersectionInterval (Itv (NegInfinity, PosInfinity)) x = x
+intersectionInterval x (Itv (NegInfinity, PosInfinity)) = x
+-- (-inf,x)
 intersectionInterval (Itv (NegInfinity, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (min x2 y2))
 intersectionInterval (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (Finite y1, Finite x2)
 intersectionInterval (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite y1, Finite (min x2 y2))
+-- (x,+inf)
 intersectionInterval (Itv (Finite x1, PosInfinity)) (Itv (NegInfinity, Finite y2)) = Itv (Finite x1, Finite y2)
 intersectionInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (max x1 y1), PosInfinity)
 intersectionInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, Finite y2)) = Itv (Finite (max x1 y1), Finite y2)
+-- (x1,x2)
 intersectionInterval (Itv (Finite x1, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (Finite x1, Finite (min x2 y2))
 intersectionInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (max x1 y1), Finite x2)
 intersectionInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (max x1 y1), Finite (min x2 y2))
@@ -124,7 +130,6 @@ divInterval _ _ = undefined
 
 eqInterval :: Interval -> Interval -> (Interval, Interval)
 eqInterval x y = (intersectionInterval x y, intersectionInterval x y)
-
 
 -- TODO 
 ltInterval :: Interval -> Interval -> (Interval, Interval)
