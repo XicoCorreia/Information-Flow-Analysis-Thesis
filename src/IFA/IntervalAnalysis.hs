@@ -249,8 +249,10 @@ updateItvUsingStmt state (AssignReg r (Mv ri)) =
         state' = updateRegisterValue r newValue state
 -- TODO 
 updateItvUsingStmt state (AssignReg r (Bin e)) = undefined
--- TODO 
-updateItvUsingStmt state (AssignReg r (Un e)) = undefined
+updateItvUsingStmt state (AssignReg r (Un e)) = state'
+  where
+    newItv = processUnaryExpression state e
+    state' = updateRegisterValue r newItv state
 
 -- TODO  Memory Handling
 updateItvUsingStmt state (StoreInMem r offset ri) = undefined
@@ -280,6 +282,19 @@ processCondition state e =
     LessEqual r ri -> undefined
     GreaterThan r ri -> undefined
     GreaterEqual r ri -> undefined
+
+processUnaryExpression :: ItvState -> UnaryExp -> Interval
+processUnaryExpression state e =
+    case e of 
+    LeOp r -> getRegisterInterval state r --Identity
+    BeOp r -> getRegisterInterval state r -- Identity
+    NegOp r -> case itv of 
+                  Itv (NegInfinity, Finite n) -> Itv (Finite (-n), PosInfinity)
+                  Itv (Finite n, PosInfinity) -> Itv (NegInfinity, Finite (-n))
+                  Itv (Finite n1, Finite n2) -> Itv (Finite (-n2), Finite (-n1))
+                  _ -> itv
+      where
+        itv = normalizeInterval $ getRegisterInterval state r
 
 registerImmediateToInterval :: ItvState -> RegImm -> Interval
 registerImmediateToInterval state ri = case ri of 
