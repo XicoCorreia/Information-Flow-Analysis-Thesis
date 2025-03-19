@@ -125,9 +125,6 @@ divInterval _ _ = undefined
 eqInterval :: Interval -> Interval -> (Interval, Interval)
 eqInterval x y = (intersectionInterval x y, intersectionInterval x y)
 
--- TODO NOTEQUAL not implemented
-noteqInterval :: Interval -> Interval -> (Interval, Interval)
-noteqInterval _ _ = undefined
 
 -- TODO 
 ltInterval :: Interval -> Interval -> (Interval, Interval)
@@ -247,19 +244,17 @@ updateItvUsingStmt state (AssignReg r (Mv ri)) =
     where 
         newValue = registerImmediateToInterval state ri
         state' = updateRegisterValue r newValue state
--- TODO 
-updateItvUsingStmt state (AssignReg r (Bin e)) = undefined
 updateItvUsingStmt state (AssignReg r (Un e)) = state'
   where
     newItv = processUnaryExpression state e
     state' = updateRegisterValue r newItv state
-
+-- TODO 
+updateItvUsingStmt state (AssignReg r (Bin e)) = undefined
 -- TODO  Memory Handling
 updateItvUsingStmt state (StoreInMem r offset ri) = undefined
 updateItvUsingStmt state (LoadFromMemReg r r' offset) = undefined
 updateItvUsingStmt state (LoadFromMemImm r i) = undefined
 
--- TODO 
 updateItvUsingStmt state (If cond _) = processCondition state cond
 updateItvUsingStmt state (CallOp _) = state
 updateItvUsingStmt state (Goto _) = state
@@ -267,26 +262,52 @@ updateItvUsingStmt state (Goto _) = state
 
 
 ------------- Functions related to states handling ------------------------
--- TODO
+
+
 processCondition :: ItvState -> Condition -> ItvState
 processCondition state e = 
   case e of 
-    Equal r ri -> state'  
+    NotEqual _ _ -> state --Identity
+    Equal r ri -> state'
       where 
         constraint = registerImmediateToInterval state ri
         regValue = getRegisterInterval state r
-        newVal = intersectionInterval regValue constraint
-        state' = updateRegisterValue r newVal state
-    NotEqual r ri -> undefined
-    LessThan r ri -> undefined
-    LessEqual r ri -> undefined
-    GreaterThan r ri -> undefined
-    GreaterEqual r ri -> undefined
+        (newValr, newValri) = eqInterval regValue constraint
+        updatedState = updateRegisterValue r newValr state
+        state' = updateRegisterImmValue ri newValri updatedState
+    LessThan r ri -> state'
+      where 
+        constraint = registerImmediateToInterval state ri
+        regValue = getRegisterInterval state r
+        (newValr, newValri) = ltInterval regValue constraint
+        updatedState = updateRegisterValue r newValr state
+        state' = updateRegisterImmValue ri newValri updatedState
+    LessEqual r ri -> state'
+      where 
+        constraint = registerImmediateToInterval state ri
+        regValue = getRegisterInterval state r
+        (newValr, newValri) = leqInterval regValue constraint
+        updatedState = updateRegisterValue r newValr state
+        state' = updateRegisterImmValue ri newValri updatedState
+    GreaterThan r ri -> state'
+      where 
+        constraint = registerImmediateToInterval state ri
+        regValue = getRegisterInterval state r
+        (newValri, newValr) = ltInterval constraint regValue
+        updatedState = updateRegisterValue r newValr state
+        state' = updateRegisterImmValue ri newValri updatedState
+    GreaterEqual r ri -> state'
+      where 
+        constraint = registerImmediateToInterval state ri
+        regValue = getRegisterInterval state r
+        (newValri, newValr) = leqInterval constraint regValue
+        updatedState = updateRegisterValue r newValr state
+        state' = updateRegisterImmValue ri newValri updatedState
 
 processUnaryExpression :: ItvState -> UnaryExp -> Interval
 processUnaryExpression state e =
     case e of 
-    LeOp r -> getRegisterInterval state r --Identity
+    LeOp r -> getRegisterInterval state r -- Identity
     BeOp r -> getRegisterInterval state r -- Identity
     NegOp r -> case itv of 
                   Itv (NegInfinity, Finite n) -> Itv (Finite (-n), PosInfinity)
@@ -306,6 +327,12 @@ getRegisterInterval s r =
     case lookup r s of
         Just itv -> itv 
         Nothing -> error "Register not found in state"
+
+updateRegisterImmValue :: RegImm -> Interval -> ItvState -> ItvState
+updateRegisterImmValue ri itv state = 
+    case ri of
+        R r -> updateRegisterValue r itv state
+        Imm _ -> state
 
 updateRegisterValue :: Reg -> Interval -> ItvState -> ItvState
 updateRegisterValue r itv = map (\(reg, i) -> 
