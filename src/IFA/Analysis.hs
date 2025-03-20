@@ -11,7 +11,8 @@ import Ebpf.Asm
 
 ------------------- Functions that perform the analysis at each program point ------------------------
 
--- Perform a the information flow analysis on a set of equations.
+-- Given a starting state with the security level for each register,
+-- perform the information flow analysis on a set of equations.
 informationFlowAnalysis :: Dom.Rooted -> Equations -> State -> SystemState
 informationFlowAnalysis graph eq initialState =
   fixpointComputation graph (replicate ((length eq) + 1) initialState, Low, Set.empty) (Map.toList eq)
@@ -46,7 +47,7 @@ processElement graph unionState (states, mem, highContext) (currentNode, ((prevN
     (state,  mem', highContext') = updateUsingStmt graph prevState mem highContext inHighContext (prevNode, currentNode) stmt 
 
 -- Update a node's state by analysing the security level of an equation, it also updates the context if the equation 
--- is a conditional jump, i.e. if cond, and in case it is a Store operation updates the memory.
+-- is a conditional jump, i.e. if cond, and in case it is a memory handling operation updates the memory.
 updateUsingStmt :: Dom.Rooted -> State -> Memory -> HighSecurityContext -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityContext)
 
 -- Process Binary operations
