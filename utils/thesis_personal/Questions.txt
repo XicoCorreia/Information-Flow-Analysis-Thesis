@@ -18,3 +18,6 @@ How to work with ifs in the analysis?
 R: Update both the registers used. Diff = identity
 UnaryExp: The big endian and little endian change the byte order, how could I handle it?
 R: Identity
+--------------------------
+Should I normalize the intervals before every operation?
+R:

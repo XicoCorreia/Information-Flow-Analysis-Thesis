@@ -49,6 +49,14 @@ initialState = [
     (Reg 6, Low), (Reg 7, Low), (Reg 8, Low), 
     (Reg 9, Low), (Reg 10, Low)]
 
+-- Initialize state with every register associated with an empty interval.
+initialStateItv :: ItvState
+initialStateItv = [
+    (Reg 0, EmptyItv), (Reg 1, EmptyItv), (Reg 2, EmptyItv), 
+    (Reg 3, EmptyItv), (Reg 4, EmptyItv), (Reg 5, EmptyItv), 
+    (Reg 6, EmptyItv), (Reg 7, EmptyItv), (Reg 8, EmptyItv), 
+    (Reg 9, EmptyItv), (Reg 10, EmptyItv)]
+
 ------------------- Perform analysis and generate dotfile with cfg ------------------------
 main :: IO ()
 main = do
@@ -69,7 +77,7 @@ main = do
               let 
                 cfg' = cfg prog
                 equations = cfgToEquations cfg' (Map.empty)
-                itv = intervalAnalysis equations
+                itv = intervalAnalysis equations initialStateItv
               in do
                 printf "\nFinal states:\n"  
                 mapM_  (\(index,lst) -> putStrLn (show index ++ ": " ++ show lst)) 

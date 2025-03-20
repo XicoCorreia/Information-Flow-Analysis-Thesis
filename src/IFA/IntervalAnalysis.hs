@@ -1,4 +1,4 @@
-module IFA.IntervalAnalysis (intervalAnalysis) where
+module IFA.IntervalAnalysis where
 
 import qualified Data.Map as Map
 
@@ -36,6 +36,9 @@ data Interval =
   | EmptyItv
     deriving (Show, Eq)
 
+-- State that associates a register with an interval.
+type ItvState = [(Reg, Interval)]
+
 ------------------- Interval Operations ------------------------
 
 -- Perform the union of two intervals.
@@ -64,6 +67,7 @@ intersectionInterval EmptyItv _ = EmptyItv
 intersectionInterval _ EmptyItv = EmptyItv
 -- case (-inf, +inf) /\ ...
 intersectionInterval (Itv (NegInfinity, PosInfinity)) x = x
+-- ... /\ case (-inf, +inf)
 intersectionInterval x (Itv (NegInfinity, PosInfinity)) = x
 -- case (-inf,x) /\ ...
 intersectionInterval (Itv (NegInfinity, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (min x2 y2))
@@ -96,33 +100,89 @@ constantInterval x = (Itv (Finite x, Finite x))
 
 ------------------- Arithmetic Interval Operations ------------------------
 
--- TODO
+-- Add operation [+] ([a,b], [c,d]) = [a+c,b+d] 
 addInterval :: Interval -> Interval -> Interval
-addInterval (Itv (NegInfinity, PosInfinity)) _ = Itv (NegInfinity, PosInfinity)
-addInterval _ (Itv (NegInfinity, PosInfinity)) = Itv (NegInfinity, PosInfinity)
 addInterval EmptyItv _ = EmptyItv
 addInterval _ EmptyItv = EmptyItv
+-- case (-inf, +inf) + ...
+addInterval (Itv (NegInfinity, PosInfinity)) _ = (Itv (NegInfinity, PosInfinity))
+-- case ... + (-inf, +inf)
+addInterval _ (Itv (NegInfinity, PosInfinity)) = (Itv (NegInfinity, PosInfinity))
+-- case (-inf,x) + ...
+addInterval (Itv (NegInfinity, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (x2+y2))
+addInterval (Itv (NegInfinity, Finite _)) (Itv (Finite _, PosInfinity)) = Itv (NegInfinity, PosInfinity)
+addInterval (Itv (NegInfinity, Finite x2)) (Itv (Finite _, Finite y2)) = Itv (NegInfinity, Finite (x2+y2))
+-- case (x,+inf) + ...
+addInterval (Itv (Finite _, PosInfinity)) (Itv (NegInfinity, Finite _)) = Itv (NegInfinity, PosInfinity)
+addInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (x1+y1), PosInfinity)
+addInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, Finite _)) = Itv (Finite (x1+y1), PosInfinity)
+-- case (x1,x2) + ...
+addInterval  (Itv (Finite _, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (x2 + y2))
+addInterval (Itv (Finite x1, Finite _)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (x1+y1), PosInfinity)
 addInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (x1 + y1), Finite (x2 + y2))
-addInterval (Itv (_, Finite x2)) (Itv (_, Finite y2)) = Itv (NegInfinity, Finite (x2 + y2))
-addInterval (Itv (Finite x1, _)) (Itv (Finite y1, _)) = Itv (Finite (x1 + y1), PosInfinity)
-addInterval (Itv (_, PosInfinity)) (Itv (NegInfinity, _))  = Itv (NegInfinity, PosInfinity)
-addInterval (Itv (NegInfinity, _)) (Itv (_, PosInfinity)) = Itv (NegInfinity, PosInfinity)
 -- case when one of the intervals is not correctly formatted
 addInterval x y = addInterval (normalizeInterval x) (normalizeInterval y)
 
--- TODO
+-- Sub operation [-] ([a,b], [c,d]) = [a-d,b-c] 
 subInterval :: Interval -> Interval -> Interval
-subInterval (Itv (NegInfinity, PosInfinity)) _ = Itv (NegInfinity, PosInfinity)
-subInterval _ (Itv (NegInfinity, PosInfinity)) = Itv (NegInfinity, PosInfinity)
 subInterval EmptyItv _ = EmptyItv
 subInterval _ EmptyItv = EmptyItv
+-- case (-inf, +inf) - ...
+subInterval (Itv (NegInfinity, PosInfinity)) _ = (Itv (NegInfinity, PosInfinity))
+-- case .. - (-inf, +inf)
+subInterval _ (Itv (NegInfinity, PosInfinity)) = (Itv (NegInfinity, PosInfinity))
+-- case (-inf,x) + ...
+subInterval (Itv (NegInfinity, Finite _)) (Itv (NegInfinity, Finite _)) = Itv (NegInfinity, PosInfinity)
+subInterval (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (NegInfinity, Finite (x2-y1))
+subInterval (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, Finite _)) = Itv (NegInfinity, Finite (x2+y1))
+-- case (x,+inf) + ...
+subInterval (Itv (Finite x1, PosInfinity)) (Itv (NegInfinity, Finite y2)) = Itv (Finite (x1-y2), PosInfinity)
+subInterval (Itv (Finite _, PosInfinity)) (Itv (Finite _, PosInfinity)) = Itv (NegInfinity, PosInfinity)
+subInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite _, Finite y2)) = Itv (Finite (x1+y2), PosInfinity)
+-- case (x1,x2) + ...
+subInterval  (Itv (Finite x1, Finite _)) (Itv (NegInfinity, Finite y2)) = Itv (Finite (x1 - y2), PosInfinity)
+subInterval (Itv (Finite _, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (NegInfinity, Finite (x2 - y1))
 subInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (x1 - y2), Finite (x2 - y1))
-subInterval (Itv (_, Finite x2)) (Itv (Finite y1, _)) = Itv (NegInfinity, Finite (x2 - y1))
-subInterval (Itv (Finite x1, _)) (Itv (_, Finite y2)) = Itv (Finite (x1 - y2), PosInfinity)
-subInterval (Itv (NegInfinity, _)) (Itv (NegInfinity, _)) = Itv (NegInfinity, PosInfinity)
-subInterval (Itv (_, PosInfinity)) (Itv (_, PosInfinity)) = Itv (NegInfinity, PosInfinity)
 -- case when one of the intervals is not correctly formatted
 subInterval x y = subInterval (normalizeInterval x) (normalizeInterval y)
+
+
+-- TODO Mul operation [-] ([a,b], [c,d]) = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)]
+mulInterval :: Interval -> Interval -> Interval
+mulInterval _ _ = undefined
+
+-- TODO Div operation 
+divInterval :: Interval -> Interval -> Interval
+divInterval _ _ = undefined
+
+-- TODO Or operation 
+orInterval :: Interval -> Interval -> Interval
+orInterval _ _ = undefined
+
+-- TODO And operation 
+andInterval :: Interval -> Interval -> Interval
+andInterval _ _ = undefined
+
+-- TODO Lsh operation
+lshInterval :: Interval -> Interval -> Interval
+lshInterval _ _ = undefined
+
+-- TODO Rsh operation
+rshInterval :: Interval -> Interval -> Interval
+rshInterval _ _ = undefined
+
+-- TODO Mod operation 
+modInterval :: Interval -> Interval -> Interval
+modInterval _ _ = undefined
+
+-- TODO Xor operation 
+xorInterval :: Interval -> Interval -> Interval
+xorInterval _ _ = undefined
+
+-- TODO Arsh operation
+arshInterval :: Interval -> Interval -> Interval
+arshInterval _ _ = undefined
+
 
 ------------------- Logical Interval Operations ------------------------
 
@@ -192,24 +252,11 @@ narrowingInterval (Itv (x1,x2)) (Itv (y1, y2)) =
   x3 = if x1 == NegInfinity then y1 else x1
   y3 = if x2 == PosInfinity then y2 else x2
 
-------------------- Interval Analysis state ------------------------
-
--- State that associates a register with an interval.
-type ItvState = [(Reg, Interval)]
-
--- Initialize state with every register associated with an empty interval.
-initialStateItv :: ItvState
-initialStateItv = [
-    (Reg 0, EmptyItv), (Reg 1, EmptyItv), (Reg 2, EmptyItv), 
-    (Reg 3, EmptyItv), (Reg 4, EmptyItv), (Reg 5, EmptyItv), 
-    (Reg 6, EmptyItv), (Reg 7, EmptyItv), (Reg 8, EmptyItv), 
-    (Reg 9, EmptyItv), (Reg 10, EmptyItv)]
-
 ------------------- Interval Analysis ------------------------
 
 -- Perform the interval analysis on a set of equations.
-intervalAnalysis :: Equations -> [ItvState]
-intervalAnalysis eq = fixpointItvAnalysis eqList state
+intervalAnalysis :: Equations -> ItvState -> [ItvState]
+intervalAnalysis eq initialStateItv = fixpointItvAnalysis eqList state
     where
         eqList = Map.toList eq 
         state = replicate (length eqList) initialStateItv
@@ -261,7 +308,7 @@ updateItvUsingStmt state (AssignReg r (Mv ri)) =
         Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
         _ -> state'
     where 
-        newValue = getRegisterImmediateToInterval state ri
+        newValue = getRegisterImmediateInterval state ri
         state' = updateRegisterValue r newValue state
 
 -- Process Unary operations
@@ -294,9 +341,29 @@ updateItvUsingStmt state (Goto _) = state
 
 ------------- Functions related to states handling ------------------------
 
--- TODO Process binary operations, by utilizing the arithmetic operations above.
+-- Process binary operations, by utilizing the arithmetic operations above.
 processBinaryExpression :: ItvState -> BinaryExp -> Interval
-processBinaryExpression state e = undefined
+processBinaryExpression state e = 
+    case e of
+      AddOp r ri -> processBinaryExpression' addInterval r ri state
+      SubOp r ri -> processBinaryExpression' subInterval r ri state
+      MulOp r ri -> processBinaryExpression' mulInterval r ri state
+      DivOp r ri -> processBinaryExpression' divInterval r ri state
+      OrOp  r ri -> processBinaryExpression' orInterval r ri state
+      AndOp r ri -> processBinaryExpression' andInterval r ri state
+      LshOp r ri -> processBinaryExpression' lshInterval r ri state
+      RshOp r ri -> processBinaryExpression' rshInterval r ri state
+      ModOp r ri -> processBinaryExpression' modInterval r ri state
+      XorOp r ri -> processBinaryExpression' xorInterval r ri state
+      ArshOp r ri -> processBinaryExpression' arshInterval r ri state
+
+-- Auxiliary function for binary expressions processing that computes the desire arithmetic 
+-- operation with the two operands.
+processBinaryExpression' :: (Interval -> Interval -> Interval) -> Reg -> RegImm -> ItvState -> Interval
+processBinaryExpression' fun r ri state = fun op1 op2
+  where
+    op1 = getRegisterInterval state r
+    op2 = getRegisterImmediateInterval state ri
 
 -- Process unary expressions, for Little Endian and Big Endian, I assume that
 -- the value does not change. In the case of Neg r, the interval associated is
@@ -322,50 +389,31 @@ processCondition state e =
     --Identity
     NotEqual _ _ -> state
     -- Equal operation 
-    Equal r ri -> state'
-      where 
-        constraint = getRegisterImmediateToInterval state ri
-        regValue = getRegisterInterval state r
-        (newValr, newValri) = eqInterval regValue constraint
-        updatedState = updateRegisterValue r newValr state
-        state' = updateRegisterImmValue ri newValri updatedState
+    Equal r ri ->  processCondition' ltInterval (R r) ri state
     -- Less than operation
-    LessThan r ri -> state'
-      where 
-        constraint = getRegisterImmediateToInterval state ri
-        regValue = getRegisterInterval state r
-        (newValr, newValri) = ltInterval regValue constraint
-        updatedState = updateRegisterValue r newValr state
-        state' = updateRegisterImmValue ri newValri updatedState
+    LessThan r ri ->  processCondition' ltInterval (R r) ri state
     -- Less or equal than operation
-    LessEqual r ri -> state'
-      where 
-        constraint = getRegisterImmediateToInterval state ri
-        regValue = getRegisterInterval state r
-        (newValr, newValri) = leqInterval regValue constraint
-        updatedState = updateRegisterValue r newValr state
-        state' = updateRegisterImmValue ri newValri updatedState
+    LessEqual r ri -> processCondition' ltInterval (R r) ri state
     -- Greater than is equivalent to less than with the operands inverted
-    GreaterThan r ri -> state'
-      where 
-        constraint = getRegisterImmediateToInterval state ri
-        regValue = getRegisterInterval state r
-        (newValri, newValr) = ltInterval constraint regValue
-        updatedState = updateRegisterValue r newValr state
-        state' = updateRegisterImmValue ri newValri updatedState
+    GreaterThan r ri -> processCondition' ltInterval ri (R r) state
     -- Greater or equal than is equivalent to less or equal than with the operands inverted
-    GreaterEqual r ri -> state'
-      where 
-        constraint = getRegisterImmediateToInterval state ri
-        regValue = getRegisterInterval state r
-        (newValri, newValr) = leqInterval constraint regValue
-        updatedState = updateRegisterValue r newValr state
-        state' = updateRegisterImmValue ri newValri updatedState
+    GreaterEqual r ri -> processCondition' leqInterval ri (R r) state
+
+-- Auxiliary function for condition processing that computes the desire logical
+-- operation with the two operands.
+processCondition' :: (Interval -> Interval -> (Interval, Interval)) -> RegImm -> RegImm -> ItvState -> ItvState
+processCondition' fun ri1 ri2 state = state'
+  where
+        op1 = getRegisterImmediateInterval state ri1
+        op2 = getRegisterImmediateInterval state ri2
+        (newVal1, newVal2) = fun op1 op2
+        updatedState = updateRegisterImmValue ri1 newVal1 state
+        state' = updateRegisterImmValue ri2 newVal2 updatedState
 
 -- If RegImm is a register it returns the interval associated to a register 
 -- in the given state, if it is an (Imm n) it returns an interval [n,n].
-getRegisterImmediateToInterval :: ItvState -> RegImm -> Interval
-getRegisterImmediateToInterval state ri = case ri of 
+getRegisterImmediateInterval :: ItvState -> RegImm -> Interval
+getRegisterImmediateInterval state ri = case ri of 
       R r' -> getRegisterInterval state r'
       Imm n -> constantInterval (fromIntegral n)
 
