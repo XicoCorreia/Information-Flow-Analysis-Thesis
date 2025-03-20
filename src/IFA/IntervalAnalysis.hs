@@ -5,21 +5,21 @@ import qualified Data.Map as Map
 import IFA.Types
 import Ebpf.Asm
 
-------------------- Interval Analysis Types ------------------------
+------------------- Itv Analysis Types ------------------------
 -- Represents the possible values in an interval.
-data IntVal = 
+data ItvVal = 
     Finite Int
   | NegInfinity
   | PosInfinity
     deriving (Show)
 
-instance Eq IntVal where
+instance Eq ItvVal where
   (Finite x) == (Finite y)       = x == y
   NegInfinity == NegInfinity     = True
   PosInfinity == PosInfinity     = True
   _ == _                         = False
 
-instance Ord IntVal where
+instance Ord ItvVal where
   compare (Finite x) (Finite y)       = compare x y
   compare (Finite _) NegInfinity      = GT
   compare (Finite _) PosInfinity      = LT
@@ -30,19 +30,19 @@ instance Ord IntVal where
   compare PosInfinity NegInfinity     = GT
   compare PosInfinity PosInfinity     = EQ
 
--- Interval, can be empty if not initialized.
-data Interval = 
-    Itv (IntVal, IntVal)
+-- Itv, can be empty if not initialized.
+data Itv = 
+    Itv (ItvVal, ItvVal)
   | EmptyItv
     deriving (Show, Eq)
 
 -- State that associates a register with an interval.
-type ItvState = [(Reg, Interval)]
+type ItvState = [(Reg, Itv)]
 
-------------------- Interval Operations ------------------------
+------------------- Itv Operations ------------------------
 
 -- Perform the union of two intervals.
-unionInterval :: Interval -> Interval -> Interval
+unionInterval :: Itv -> Itv -> Itv
 unionInterval EmptyItv x = x
 unionInterval x EmptyItv = x
 -- case (-inf, +inf) \/ ...
@@ -62,7 +62,7 @@ unionInterval (Itv (Finite _, Finite _)) (Itv (NegInfinity, PosInfinity)) = Itv 
 unionInterval x y = unionInterval (normalizeInterval x) (normalizeInterval y)
 
 -- Perform the intersection of two intervals.
-intersectionInterval :: Interval -> Interval -> Interval
+intersectionInterval :: Itv -> Itv -> Itv
 intersectionInterval EmptyItv _ = EmptyItv
 intersectionInterval _ EmptyItv = EmptyItv
 -- case (-inf, +inf) /\ ...
@@ -85,7 +85,7 @@ intersectionInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) =
 intersectionInterval x y = intersectionInterval (normalizeInterval x) (normalizeInterval y)
 
 -- Normalize the interval, i.e. correct the intervals in case of bad formatting.
-normalizeInterval :: Interval -> Interval
+normalizeInterval :: Itv -> Itv
 normalizeInterval  (Itv (Finite x1, Finite x2)) = 
   if x1 <= x2 
     then (Itv (Finite x1, Finite x2)) 
@@ -95,13 +95,13 @@ normalizeInterval  (Itv (PosInfinity, _)) = EmptyItv
 normalizeInterval x = x
 
 -- Takes an int n and returns the constant as an interval [n,n].
-constantInterval :: Int -> Interval
+constantInterval :: Int -> Itv
 constantInterval x = (Itv (Finite x, Finite x)) 
 
-------------------- Arithmetic Interval Operations ------------------------
+------------------- Arithmetic Itv Operations ------------------------
 
 -- Add operation [+] ([a,b], [c,d]) = [a+c,b+d] 
-addInterval :: Interval -> Interval -> Interval
+addInterval :: Itv -> Itv -> Itv
 addInterval EmptyItv _ = EmptyItv
 addInterval _ EmptyItv = EmptyItv
 -- case (-inf, +inf) + ...
@@ -124,7 +124,7 @@ addInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Fin
 addInterval x y = addInterval (normalizeInterval x) (normalizeInterval y)
 
 -- Sub operation [-] ([a,b], [c,d]) = [a-d,b-c] 
-subInterval :: Interval -> Interval -> Interval
+subInterval :: Itv -> Itv -> Itv
 subInterval EmptyItv _ = EmptyItv
 subInterval _ EmptyItv = EmptyItv
 -- case (-inf, +inf) - ...
@@ -148,50 +148,50 @@ subInterval x y = subInterval (normalizeInterval x) (normalizeInterval y)
 
 
 -- TODO Mul operation [-] ([a,b], [c,d]) = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)]
-mulInterval :: Interval -> Interval -> Interval
+mulInterval :: Itv -> Itv -> Itv
 mulInterval _ _ = undefined
 
 -- TODO Div operation 
-divInterval :: Interval -> Interval -> Interval
+divInterval :: Itv -> Itv -> Itv
 divInterval _ _ = undefined
 
 -- TODO Or operation 
-orInterval :: Interval -> Interval -> Interval
+orInterval :: Itv -> Itv -> Itv
 orInterval _ _ = undefined
 
 -- TODO And operation 
-andInterval :: Interval -> Interval -> Interval
+andInterval :: Itv -> Itv -> Itv
 andInterval _ _ = undefined
 
 -- TODO Lsh operation
-lshInterval :: Interval -> Interval -> Interval
+lshInterval :: Itv -> Itv -> Itv
 lshInterval _ _ = undefined
 
 -- TODO Rsh operation
-rshInterval :: Interval -> Interval -> Interval
+rshInterval :: Itv -> Itv -> Itv
 rshInterval _ _ = undefined
 
 -- TODO Mod operation 
-modInterval :: Interval -> Interval -> Interval
+modInterval :: Itv -> Itv -> Itv
 modInterval _ _ = undefined
 
 -- TODO Xor operation 
-xorInterval :: Interval -> Interval -> Interval
+xorInterval :: Itv -> Itv -> Itv
 xorInterval _ _ = undefined
 
 -- TODO Arsh operation
-arshInterval :: Interval -> Interval -> Interval
+arshInterval :: Itv -> Itv -> Itv
 arshInterval _ _ = undefined
 
 
-------------------- Logical Interval Operations ------------------------
+------------------- Logical Itv Operations ------------------------
 
 -- Equal operation [=] ([a,b],[c,d]) = ([a,b] /\ [c,d], [a,b] /\ [c,d]).
-eqInterval :: Interval -> Interval -> (Interval, Interval)
+eqInterval :: Itv -> Itv -> (Itv, Itv)
 eqInterval x y = (intersectionInterval x y, intersectionInterval x y)
 
 -- Less than operation [<] ([a,b],[c,d]) = ([a,b] /\ [-inf, d-1], [a+1,+inf] /\ [c,d]).
-ltInterval :: Interval -> Interval -> (Interval, Interval)
+ltInterval :: Itv -> Itv -> (Itv, Itv)
 ltInterval EmptyItv _ = (EmptyItv, EmptyItv)
 ltInterval _ EmptyItv = (EmptyItv, EmptyItv)
 -- case (x1,_) < (_,y1)
@@ -214,7 +214,7 @@ ltInterval (Itv (NegInfinity,x2)) (Itv (y1,PosInfinity)) =
 ltInterval x y = ltInterval (normalizeInterval x) (normalizeInterval y)
 
 -- Normalize the intervals before performing the less or equal than operation.
-leqInterval :: Interval -> Interval -> (Interval, Interval)
+leqInterval :: Itv -> Itv -> (Itv, Itv)
 leqInterval itv1 itv2 = leqInterval' itv1' itv2'
   where 
     itv1' = normalizeInterval itv1
@@ -222,7 +222,7 @@ leqInterval itv1 itv2 = leqInterval' itv1' itv2'
 
 -- Peform the actual less or equal than operation:
 -- Less than operation [<=] ([a,b],[c,d]) = ([a,b] /\ [-inf, d], [a,+inf] /\ [c,d]).
-leqInterval' :: Interval -> Interval -> (Interval, Interval)
+leqInterval' :: Itv -> Itv -> (Itv, Itv)
 leqInterval' EmptyItv _ = (EmptyItv, EmptyItv)
 leqInterval' _ EmptyItv = (EmptyItv, EmptyItv)
 leqInterval' (Itv (x1,x2)) (Itv (y1,y2)) = 
@@ -233,7 +233,7 @@ leqInterval' (Itv (x1,x2)) (Itv (y1,y2)) =
 ------------------- Widening & Narrowing ------------------------
 
 -- Performs widening operation in two intervals.
-wideningInterval :: Interval -> Interval -> Interval
+wideningInterval :: Itv -> Itv -> Itv
 wideningInterval x EmptyItv = x
 wideningInterval EmptyItv x = x
 wideningInterval (Itv (x1,x2)) (Itv (y1, y2)) =
@@ -243,7 +243,7 @@ wideningInterval (Itv (x1,x2)) (Itv (y1, y2)) =
   y3 = if y2 > x2 then PosInfinity else x2
 
 -- Performs narrowing operation in two intervals.
-narrowingInterval :: Interval -> Interval -> Interval
+narrowingInterval :: Itv -> Itv -> Itv
 narrowingInterval _ EmptyItv = EmptyItv
 narrowingInterval EmptyItv _ = EmptyItv
 narrowingInterval (Itv (x1,x2)) (Itv (y1, y2)) =
@@ -252,7 +252,7 @@ narrowingInterval (Itv (x1,x2)) (Itv (y1, y2)) =
   x3 = if x1 == NegInfinity then y1 else x1
   y3 = if x2 == PosInfinity then y2 else x2
 
-------------------- Interval Analysis ------------------------
+------------------- Itv Analysis ------------------------
 
 -- Perform the interval analysis on a set of equations.
 intervalAnalysis :: Equations -> ItvState -> [ItvState]
@@ -342,7 +342,7 @@ updateItvUsingStmt state (Goto _) = state
 ------------- Functions related to states handling ------------------------
 
 -- Process binary operations, by utilizing the arithmetic operations above.
-processBinaryExpression :: ItvState -> BinaryExp -> Interval
+processBinaryExpression :: ItvState -> BinaryExp -> Itv
 processBinaryExpression state e = 
     case e of
       AddOp r ri -> processBinaryExpression' addInterval r ri state
@@ -359,7 +359,7 @@ processBinaryExpression state e =
 
 -- Auxiliary function for binary expressions processing that computes the desire arithmetic 
 -- operation with the two operands.
-processBinaryExpression' :: (Interval -> Interval -> Interval) -> Reg -> RegImm -> ItvState -> Interval
+processBinaryExpression' :: (Itv -> Itv -> Itv) -> Reg -> RegImm -> ItvState -> Itv
 processBinaryExpression' fun r ri state = fun op1 op2
   where
     op1 = getRegisterInterval state r
@@ -368,7 +368,7 @@ processBinaryExpression' fun r ri state = fun op1 op2
 -- Process unary expressions, for Little Endian and Big Endian, I assume that
 -- the value does not change. In the case of Neg r, the interval associated is
 -- negated, for example [a, b] becomes [-b, -a].
-processUnaryExpression :: ItvState -> UnaryExp -> Interval
+processUnaryExpression :: ItvState -> UnaryExp -> Itv
 processUnaryExpression state e =
     case e of 
     LeOp r -> getRegisterInterval state r -- Identity
@@ -401,7 +401,7 @@ processCondition state e =
 
 -- Auxiliary function for condition processing that computes the desire logical
 -- operation with the two operands.
-processCondition' :: (Interval -> Interval -> (Interval, Interval)) -> RegImm -> RegImm -> ItvState -> ItvState
+processCondition' :: (Itv -> Itv -> (Itv, Itv)) -> RegImm -> RegImm -> ItvState -> ItvState
 processCondition' fun ri1 ri2 state = state'
   where
         op1 = getRegisterImmediateInterval state ri1
@@ -412,13 +412,13 @@ processCondition' fun ri1 ri2 state = state'
 
 -- If RegImm is a register it returns the interval associated to a register 
 -- in the given state, if it is an (Imm n) it returns an interval [n,n].
-getRegisterImmediateInterval :: ItvState -> RegImm -> Interval
+getRegisterImmediateInterval :: ItvState -> RegImm -> Itv
 getRegisterImmediateInterval state ri = case ri of 
       R r' -> getRegisterInterval state r'
       Imm n -> constantInterval (fromIntegral n)
 
 -- Returns the interval associated to a register in the given state.
-getRegisterInterval :: ItvState -> Reg -> Interval
+getRegisterInterval :: ItvState -> Reg -> Itv
 getRegisterInterval state r =   
     case lookup r state of
         Just itv -> itv 
@@ -426,14 +426,14 @@ getRegisterInterval state r =
 
 -- If the RegImm is a register updates the interval in the state, 
 -- otherwise it returns the state without changes.
-updateRegisterImmValue :: RegImm -> Interval -> ItvState -> ItvState
+updateRegisterImmValue :: RegImm -> Itv -> ItvState -> ItvState
 updateRegisterImmValue ri itv state = 
     case ri of
         R r -> updateRegisterValue r itv state
         Imm _ -> state
 
 -- Updates the value of a register in the state.
-updateRegisterValue :: Reg -> Interval -> ItvState -> ItvState
+updateRegisterValue :: Reg -> Itv -> ItvState -> ItvState
 updateRegisterValue r itv = map (\(reg, i) -> 
     if reg == r 
         then (reg, itv)
