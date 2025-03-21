@@ -146,7 +146,7 @@ subInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Fin
 -- case when one of the intervals is not correctly formatted
 subInterval x y = subInterval (normalizeInterval x) (normalizeInterval y)
 
--- Mul operation [-] ([a,b], [c,d]) = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)]
+-- Mul operation [*] ([a,b], [c,d]) = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)]
 mulInterval :: Itv -> Itv -> Itv
 mulInterval x y = mulInterval' (normalizeInterval x) (normalizeInterval y)
   where
@@ -185,9 +185,32 @@ mul' (Finite x) (Finite y) = Finite (x*y)
 mul' (Finite x) NegInfinity = mul' NegInfinity (Finite x) 
 mul' x y = error $ "It shouldnt reach here:" ++ (show x) ++ (show y)
 
--- TODO Div operation 
+-- Div operation [/] ([a,b], [c,d]) = [*] ([a,b], [1/d,1/c])
 divInterval :: Itv -> Itv -> Itv
-divInterval _ _ = undefined
+divInterval x y = divInterval' (normalizeInterval x) (normalizeInterval y)
+  where
+    divInterval' :: Itv -> Itv -> Itv
+    divInterval' EmptyItv _ = EmptyItv
+    divInterval' _ EmptyItv = EmptyItv
+    divInterval' (Itv (a,b)) (Itv (c,d)) = Itv(minimum [ac,ad,bc,bd], maximum [ac,ad,bc,bd])
+      where 
+        (c',d') = invert (c,d)
+        ac = mul' a c'
+        ad = mul' a d'
+        bc = mul' b c'
+        bd = mul' b d'
+
+invert :: (ItvVal, ItvVal) -> (ItvVal, ItvVal)
+invert (NegInfinity, PosInfinity) = ((Finite 0), (Finite 0))
+invert (NegInfinity, (Finite 0)) = (NegInfinity, (Finite 0))
+invert (NegInfinity, (Finite y)) = ((Finite (1 `div` y)), (Finite 0))
+invert ((Finite 0), PosInfinity) = ((Finite 0), PosInfinity)
+invert ((Finite x), PosInfinity) = ((Finite 0), (Finite (1 `div` x)))
+invert ((Finite 0), (Finite 0)) = (NegInfinity, PosInfinity)
+invert ((Finite 0), (Finite y)) = ((Finite (1 `div` y)), PosInfinity)
+invert ((Finite x), (Finite 0)) = (NegInfinity, (Finite (1 `div` x)))
+invert ((Finite x), (Finite y)) = ((Finite (1 `div` y)), (Finite (1 `div` x)))
+invert (x,y) = error $ "It shouldnt reach here:" ++ (show x) ++ (show y)
 
 -- TODO Or operation 
 orInterval :: Itv -> Itv -> Itv
@@ -380,8 +403,8 @@ processBinaryExpression :: ItvState -> BinaryExp -> Itv
 processBinaryExpression state e = 
     case e of
       AddOp r ri -> processBinaryExpression' addInterval r ri state
-      SubOp r ri -> processBinaryExpression' mulInterval r ri state
-      MulOp r ri -> processBinaryExpression' mulInterval r ri state
+      SubOp r ri -> processBinaryExpression' divInterval r ri state
+      MulOp r ri -> processBinaryExpression' divInterval r ri state
       DivOp r ri -> processBinaryExpression' divInterval r ri state
       OrOp  r ri -> processBinaryExpression' orInterval r ri state
       AndOp r ri -> processBinaryExpression' andInterval r ri state

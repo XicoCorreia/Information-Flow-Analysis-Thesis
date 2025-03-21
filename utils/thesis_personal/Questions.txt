@@ -21,3 +21,5 @@ R: Identity
 --------------------------
 Should I normalize the intervals before every operation?
 R:
+Case for the division, what if the element can be 0?
+R: 
