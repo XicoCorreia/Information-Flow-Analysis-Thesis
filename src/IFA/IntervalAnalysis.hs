@@ -146,10 +146,44 @@ subInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Fin
 -- case when one of the intervals is not correctly formatted
 subInterval x y = subInterval (normalizeInterval x) (normalizeInterval y)
 
-
--- TODO Mul operation [-] ([a,b], [c,d]) = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)]
+-- Mul operation [-] ([a,b], [c,d]) = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)]
 mulInterval :: Itv -> Itv -> Itv
-mulInterval _ _ = undefined
+mulInterval x y = mulInterval' (normalizeInterval x) (normalizeInterval y)
+  where
+    mulInterval' :: Itv -> Itv -> Itv
+    mulInterval' EmptyItv _ = EmptyItv
+    mulInterval' _ EmptyItv = EmptyItv
+    mulInterval' (Itv (a,b)) (Itv (c,d)) = Itv(minimum [ac,ad,bc,bd], maximum [ac,ad,bc,bd])
+      where 
+        ac = mul' a c
+        ad = mul' a d
+        bc = mul' b c
+        bd = mul' b d
+
+-- Auxiliar operation for multiplication that computes the multiplication value
+mul' :: ItvVal -> ItvVal -> ItvVal 
+-- -inf * ...
+mul' NegInfinity PosInfinity = NegInfinity
+mul' NegInfinity (Finite x) = 
+  if x == 0 
+    then Finite 0
+    else if x < 0
+      then PosInfinity
+      else NegInfinity
+mul' NegInfinity NegInfinity = PosInfinity
+-- +inf * ...
+mul' PosInfinity NegInfinity = NegInfinity 
+mul' PosInfinity (Finite x) =
+    if x == 0 
+    then Finite 0
+    else if x < 0
+      then NegInfinity
+      else PosInfinity
+-- finite * ...
+mul' (Finite x) PosInfinity = mul' PosInfinity (Finite x)
+mul' (Finite x) (Finite y) = Finite (x*y) 
+mul' (Finite x) NegInfinity = mul' NegInfinity (Finite x) 
+mul' x y = error $ "It shouldnt reach here:" ++ (show x) ++ (show y)
 
 -- TODO Div operation 
 divInterval :: Itv -> Itv -> Itv
@@ -346,7 +380,7 @@ processBinaryExpression :: ItvState -> BinaryExp -> Itv
 processBinaryExpression state e = 
     case e of
       AddOp r ri -> processBinaryExpression' addInterval r ri state
-      SubOp r ri -> processBinaryExpression' subInterval r ri state
+      SubOp r ri -> processBinaryExpression' mulInterval r ri state
       MulOp r ri -> processBinaryExpression' mulInterval r ri state
       DivOp r ri -> processBinaryExpression' divInterval r ri state
       OrOp  r ri -> processBinaryExpression' orInterval r ri state
