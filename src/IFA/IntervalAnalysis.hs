@@ -5,6 +5,8 @@ import qualified Data.Map as Map
 import IFA.Types
 import Ebpf.Asm
 
+import Data.Bits
+
 ------------------- Itv Analysis Types ------------------------
 -- Represents the possible values in an interval.
 data ItvVal = 
@@ -179,11 +181,11 @@ mul' PosInfinity (Finite x) =
     else if x < 0
       then NegInfinity
       else PosInfinity
+mul' PosInfinity PosInfinity = PosInfinity
 -- finite * ...
 mul' (Finite x) PosInfinity = mul' PosInfinity (Finite x)
 mul' (Finite x) (Finite y) = Finite (x*y) 
 mul' (Finite x) NegInfinity = mul' NegInfinity (Finite x) 
-mul' x y = error $ "It shouldnt reach here:" ++ (show x) ++ (show y)
 
 -- Div operation [/] ([a,b], [c,d]) = [*] ([a,b], [1/d,1/c])
 divInterval :: Itv -> Itv -> Itv
@@ -212,21 +214,78 @@ invert ((Finite x), (Finite 0)) = (NegInfinity, (Finite (1 `div` x)))
 invert ((Finite x), (Finite y)) = ((Finite (1 `div` y)), (Finite (1 `div` x)))
 invert (x,y) = error $ "It shouldnt reach here:" ++ (show x) ++ (show y)
 
--- TODO Or operation 
+-- Or operation, the minimum is always the minimum value a interval can take and
+-- the maximum is infinity
 orInterval :: Itv -> Itv -> Itv
-orInterval _ _ = undefined
+orInterval EmptyItv _ = EmptyItv
+orInterval _ EmptyItv = EmptyItv
+orInterval (Itv (a,_)) (Itv (c,_)) = Itv(minimum [a,c], PosInfinity)
 
--- TODO And operation 
+-- And operation, the minimum value is negative infinity and maximum the highest
+-- value one of the intervals can take
 andInterval :: Itv -> Itv -> Itv
-andInterval _ _ = undefined
+andInterval _ EmptyItv = EmptyItv
+andInterval EmptyItv _ = EmptyItv
+andInterval (Itv (_,b)) (Itv (_,d)) = Itv(NegInfinity, maximum [b,d])
 
--- TODO Lsh operation
+
+-- Lsh operation
 lshInterval :: Itv -> Itv -> Itv
-lshInterval _ _ = undefined
+lshInterval x y = lshInterval' (normalizeInterval x) (normalizeInterval y)
+  where
+    lshInterval' :: Itv -> Itv -> Itv
+    lshInterval' EmptyItv _ = EmptyItv
+    lshInterval' _ EmptyItv = EmptyItv
+    lshInterval' (Itv (a,b)) (Itv (c,d)) = Itv(minimum [ac,ad,bc,bd], maximum [ac,ad,bc,bd])
+      where 
+        ac = lshift a c
+        ad = lshift a d
+        bc = lshift b c
+        bd = lshift b d
 
--- TODO Rsh operation
+-- Shift left operation, in the case the offset is negative it throws an error
+lshift :: ItvVal -> ItvVal -> ItvVal
+-- -inf
+lshift NegInfinity PosInfinity = NegInfinity
+lshift NegInfinity (Finite x) = if x >= 0 then NegInfinity else error "Impossible to shift with negative offset"
+lshift NegInfinity NegInfinity = error "Impossible to shift with negative offset"
+-- +inf 
+lshift PosInfinity NegInfinity = error "Impossible to shift with negative offset"
+lshift PosInfinity (Finite x) = if x >= 0 then PosInfinity else error "Impossible to shift with negative offset"
+lshift PosInfinity PosInfinity = PosInfinity
+-- finite * ...
+lshift (Finite _) PosInfinity = PosInfinity
+lshift (Finite x) (Finite y) = if y >= 0 then (Finite (shiftL x y)) else error "Impossible to shift with negative offset"
+lshift (Finite _) NegInfinity = error "Impossible to shift with negative offset" 
+
+-- Rsh operation
 rshInterval :: Itv -> Itv -> Itv
-rshInterval _ _ = undefined
+rshInterval x y = rshInterval' (normalizeInterval x) (normalizeInterval y)
+  where
+    rshInterval' :: Itv -> Itv -> Itv
+    rshInterval' EmptyItv _ = EmptyItv
+    rshInterval' _ EmptyItv = EmptyItv
+    rshInterval' (Itv (a,b)) (Itv (c,d)) = Itv(minimum [ac,ad,bc,bd], maximum [ac,ad,bc,bd])
+      where 
+        ac = rshift a c
+        ad = rshift a d
+        bc = rshift b c
+        bd = rshift b d
+
+-- Shift right operation, in the case the offset is negative it throws an error
+rshift :: ItvVal -> ItvVal -> ItvVal
+-- -inf
+rshift NegInfinity PosInfinity = (Finite 0)
+rshift NegInfinity (Finite x) = if x >= 0 then NegInfinity else error "Impossible to shift with negative offset"
+rshift NegInfinity NegInfinity = error "Impossible to shift with negative offset"
+-- +inf 
+rshift PosInfinity NegInfinity = error "Impossible to shift with negative offset"
+rshift PosInfinity (Finite x) = if x >= 0 then PosInfinity else error "Impossible to shift with negative offset"
+rshift PosInfinity PosInfinity = (Finite 0)
+-- finite * ...
+rshift (Finite _) PosInfinity = (Finite 0)
+rshift (Finite x) (Finite y) = if y >= 0 then (Finite (shiftR x y)) else error "Impossible to shift with negative offset"
+rshift (Finite _) NegInfinity = error "Impossible to shift with negative offset" 
 
 -- TODO Mod operation 
 modInterval :: Itv -> Itv -> Itv
