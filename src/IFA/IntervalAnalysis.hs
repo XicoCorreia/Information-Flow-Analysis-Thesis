@@ -1,49 +1,11 @@
-module IFA.IntervalAnalysis where
+module IFA.IntervalAnalysis (intervalAnalysis) where
 
 import qualified Data.Map as Map
+import Data.Maybe (mapMaybe)
+import Data.Bits
 
 import IFA.Types
 import Ebpf.Asm
-
-import Data.Maybe (mapMaybe)
-
-import Data.Bits
-
-------------------- Itv Analysis Types ------------------------
--- Represents the possible values in an interval.
-data ItvVal = 
-    Finite Int
-  | NegInfinity
-  | PosInfinity
-    deriving (Show)
-
-instance Eq ItvVal where
-  (Finite x) == (Finite y)       = x == y
-  NegInfinity == NegInfinity     = True
-  PosInfinity == PosInfinity     = True
-  _ == _                         = False
-
-instance Ord ItvVal where
-  compare (Finite x) (Finite y)       = compare x y
-  compare (Finite _) NegInfinity      = GT
-  compare (Finite _) PosInfinity      = LT
-  compare NegInfinity (Finite _)      = LT
-  compare NegInfinity NegInfinity     = EQ
-  compare NegInfinity PosInfinity     = LT
-  compare PosInfinity (Finite _)      = GT
-  compare PosInfinity NegInfinity     = GT
-  compare PosInfinity PosInfinity     = EQ
-
--- Itv, can be empty if not initialized.
-data Itv = 
-    Itv (ItvVal, ItvVal)
-  | EmptyItv
-    deriving (Show, Eq)
-
--- State that associates a register with an interval.
-type ItvState = [(Reg, Itv)]
-
-type ItvMemory = Map.Map Int Itv
 
 ------------------- Itv Operations ------------------------
 
@@ -377,24 +339,24 @@ leqInterval' (Itv (x1,x2)) (Itv (y1,y2)) =
 ------------------- Widening & Narrowing ------------------------
 
 -- Performs widening operation in two intervals.
-wideningInterval :: Itv -> Itv -> Itv
-wideningInterval x EmptyItv = x
-wideningInterval EmptyItv x = x
-wideningInterval (Itv (x1,x2)) (Itv (y1, y2)) =
-  Itv (x3,y3) 
-  where
-  x3 = if y1 < x1 then NegInfinity else x1
-  y3 = if y2 > x2 then PosInfinity else x2
+-- wideningInterval :: Itv -> Itv -> Itv
+-- wideningInterval x EmptyItv = x
+-- wideningInterval EmptyItv x = x
+-- wideningInterval (Itv (x1,x2)) (Itv (y1, y2)) =
+--   Itv (x3,y3) 
+--   where
+--   x3 = if y1 < x1 then NegInfinity else x1
+--   y3 = if y2 > x2 then PosInfinity else x2
 
--- Performs narrowing operation in two intervals.
-narrowingInterval :: Itv -> Itv -> Itv
-narrowingInterval _ EmptyItv = EmptyItv
-narrowingInterval EmptyItv _ = EmptyItv
-narrowingInterval (Itv (x1,x2)) (Itv (y1, y2)) =
-  Itv (x3,y3) 
-  where
-  x3 = if x1 == NegInfinity then y1 else x1
-  y3 = if x2 == PosInfinity then y2 else x2
+-- -- Performs narrowing operation in two intervals.
+-- narrowingInterval :: Itv -> Itv -> Itv
+-- narrowingInterval _ EmptyItv = EmptyItv
+-- narrowingInterval EmptyItv _ = EmptyItv
+-- narrowingInterval (Itv (x1,x2)) (Itv (y1, y2)) =
+--   Itv (x3,y3) 
+--   where
+--   x3 = if x1 == NegInfinity then y1 else x1
+--   y3 = if x2 == PosInfinity then y2 else x2
 
 ------------------- Itv Analysis ------------------------
 
@@ -518,8 +480,8 @@ processBinaryExpression :: ItvState -> BinaryExp -> Itv
 processBinaryExpression state e = 
     case e of
       AddOp r ri -> processBinaryExpression' addInterval r ri state
-      SubOp r ri -> processBinaryExpression' divInterval r ri state
-      MulOp r ri -> processBinaryExpression' divInterval r ri state
+      SubOp r ri -> processBinaryExpression' subInterval r ri state
+      MulOp r ri -> processBinaryExpression' mulInterval r ri state
       DivOp r ri -> processBinaryExpression' divInterval r ri state
       OrOp  r ri -> processBinaryExpression' orInterval r ri state
       AndOp r ri -> processBinaryExpression' andInterval r ri state
@@ -561,7 +523,7 @@ processCondition state e =
     --Identity
     NotEqual _ _ -> state
     -- Equal operation 
-    Equal r ri ->  processCondition' ltInterval (R r) ri state
+    Equal r ri ->  processCondition' eqInterval (R r) ri state
     -- Less than operation
     LessThan r ri ->  processCondition' ltInterval (R r) ri state
     -- Less or equal than operation

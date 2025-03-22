@@ -79,3 +79,39 @@ type Memory = SecurityLevel
 type HighSecurityContext = Set.Set (Label,[Label]) 
 
 type SystemState = ([State], Memory, HighSecurityContext)
+
+------------------- Itv Analysis Types ------------------------
+-- Represents the possible values in an interval.
+data ItvVal = 
+    Finite Int
+  | NegInfinity
+  | PosInfinity
+    deriving (Show)
+
+instance Eq ItvVal where
+  (Finite x) == (Finite y)       = x == y
+  NegInfinity == NegInfinity     = True
+  PosInfinity == PosInfinity     = True
+  _ == _                         = False
+
+instance Ord ItvVal where
+  compare (Finite x) (Finite y)       = compare x y
+  compare (Finite _) NegInfinity      = GT
+  compare (Finite _) PosInfinity      = LT
+  compare NegInfinity (Finite _)      = LT
+  compare NegInfinity NegInfinity     = EQ
+  compare NegInfinity PosInfinity     = LT
+  compare PosInfinity (Finite _)      = GT
+  compare PosInfinity NegInfinity     = GT
+  compare PosInfinity PosInfinity     = EQ
+
+-- Itv, can be empty if not initialized.
+data Itv = 
+    Itv (ItvVal, ItvVal)
+  | EmptyItv
+    deriving (Show, Eq)
+
+-- State that associates a register with an interval.
+type ItvState = [(Reg, Itv)]
+
+type ItvMemory = Map.Map Int Itv
