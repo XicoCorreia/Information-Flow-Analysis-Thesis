@@ -77,7 +77,7 @@ main = do
               let 
                 cfg' = cfg prog
                 equations = cfgToEquations cfg' (Map.empty)
-                itv = intervalAnalysis equations initialStateItv
+                (itv,_) = intervalAnalysis equations initialStateItv
               in do
                 printf "\nFinal states:\n"  
                 mapM_  (\(index,lst) -> putStrLn (show index ++ ": " ++ show lst)) 

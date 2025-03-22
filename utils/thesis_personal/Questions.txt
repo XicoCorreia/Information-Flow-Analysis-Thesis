@@ -23,3 +23,10 @@ Should I normalize the intervals before every operation?
 R:
 Case for the division, what if the element can be 0?
 R: 
+Take a look at or/and, are the intervals correct?
+R:
+What about XOR, I cant find any ideas of how to do it?
+R:
+Mod, show https://stackoverflow.com/questions/31057473/calculating-the-modulo-of-two-intervals.
+R: 
+--------------------------

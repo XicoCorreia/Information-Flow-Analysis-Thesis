@@ -5,6 +5,8 @@ import qualified Data.Map as Map
 import IFA.Types
 import Ebpf.Asm
 
+import Data.Maybe (mapMaybe)
+
 import Data.Bits
 
 ------------------- Itv Analysis Types ------------------------
@@ -40,6 +42,8 @@ data Itv =
 
 -- State that associates a register with an interval.
 type ItvState = [(Reg, Itv)]
+
+type ItvMemory = Map.Map Int Itv
 
 ------------------- Itv Operations ------------------------
 
@@ -102,7 +106,7 @@ constantInterval x = (Itv (Finite x, Finite x))
 
 ------------------- Arithmetic Itv Operations ------------------------
 
--- Add operation [+] ([a,b], [c,d]) = [a+c,b+d] 
+-- Add operation [+] ([a,b], [c,d]) = [a+c,b+d].
 addInterval :: Itv -> Itv -> Itv
 addInterval EmptyItv _ = EmptyItv
 addInterval _ EmptyItv = EmptyItv
@@ -125,7 +129,7 @@ addInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Fin
 -- case when one of the intervals is not correctly formatted
 addInterval x y = addInterval (normalizeInterval x) (normalizeInterval y)
 
--- Sub operation [-] ([a,b], [c,d]) = [a-d,b-c] 
+-- Sub operation [-] ([a,b], [c,d]) = [a-d,b-c] .
 subInterval :: Itv -> Itv -> Itv
 subInterval EmptyItv _ = EmptyItv
 subInterval _ EmptyItv = EmptyItv
@@ -148,7 +152,7 @@ subInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Fin
 -- case when one of the intervals is not correctly formatted
 subInterval x y = subInterval (normalizeInterval x) (normalizeInterval y)
 
--- Mul operation [*] ([a,b], [c,d]) = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)]
+-- Mul operation [*] ([a,b], [c,d]) = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)].
 mulInterval :: Itv -> Itv -> Itv
 mulInterval x y = mulInterval' (normalizeInterval x) (normalizeInterval y)
   where
@@ -162,7 +166,7 @@ mulInterval x y = mulInterval' (normalizeInterval x) (normalizeInterval y)
         bc = mul' b c
         bd = mul' b d
 
--- Auxiliar operation for multiplication that computes the multiplication value
+-- Auxiliar operation for multiplication that computes the multiplication value.
 mul' :: ItvVal -> ItvVal -> ItvVal 
 -- -inf * ...
 mul' NegInfinity PosInfinity = NegInfinity
@@ -187,7 +191,7 @@ mul' (Finite x) PosInfinity = mul' PosInfinity (Finite x)
 mul' (Finite x) (Finite y) = Finite (x*y) 
 mul' (Finite x) NegInfinity = mul' NegInfinity (Finite x) 
 
--- Div operation [/] ([a,b], [c,d]) = [*] ([a,b], [1/d,1/c])
+-- Div operation [/] ([a,b], [c,d]) = [*] ([a,b], [1/d,1/c]).
 divInterval :: Itv -> Itv -> Itv
 divInterval x y = divInterval' (normalizeInterval x) (normalizeInterval y)
   where
@@ -215,21 +219,21 @@ invert ((Finite x), (Finite y)) = ((Finite (1 `div` y)), (Finite (1 `div` x)))
 invert (x,y) = error $ "It shouldnt reach here:" ++ (show x) ++ (show y)
 
 -- Or operation, the minimum is always the minimum value a interval can take and
--- the maximum is infinity
+-- the maximum is infinity.
 orInterval :: Itv -> Itv -> Itv
 orInterval EmptyItv _ = EmptyItv
 orInterval _ EmptyItv = EmptyItv
 orInterval (Itv (a,_)) (Itv (c,_)) = Itv(minimum [a,c], PosInfinity)
 
 -- And operation, the minimum value is negative infinity and maximum the highest
--- value one of the intervals can take
+-- value one of the intervals can take.
 andInterval :: Itv -> Itv -> Itv
 andInterval _ EmptyItv = EmptyItv
 andInterval EmptyItv _ = EmptyItv
 andInterval (Itv (_,b)) (Itv (_,d)) = Itv(NegInfinity, maximum [b,d])
 
 
--- Lsh operation
+-- Lsh operation.
 lshInterval :: Itv -> Itv -> Itv
 lshInterval x y = lshInterval' (normalizeInterval x) (normalizeInterval y)
   where
@@ -243,7 +247,7 @@ lshInterval x y = lshInterval' (normalizeInterval x) (normalizeInterval y)
         bc = lshift b c
         bd = lshift b d
 
--- Shift left operation, in the case the offset is negative it throws an error
+-- Shift left operation, in the case the offset is negative it throws an error.
 lshift :: ItvVal -> ItvVal -> ItvVal
 -- -inf
 lshift NegInfinity PosInfinity = NegInfinity
@@ -255,10 +259,10 @@ lshift PosInfinity (Finite x) = if x >= 0 then PosInfinity else error "Impossibl
 lshift PosInfinity PosInfinity = PosInfinity
 -- finite * ...
 lshift (Finite _) PosInfinity = PosInfinity
-lshift (Finite x) (Finite y) = if y >= 0 then (Finite (shiftL x y)) else error "Impossible to shift with negative offset"
+lshift (Finite x) (Finite y) = if y >= 0 then (Finite (unsafeShiftL x y)) else error "Impossible to shift with negative offset"
 lshift (Finite _) NegInfinity = error "Impossible to shift with negative offset" 
 
--- Rsh operation
+-- Rsh operation.
 rshInterval :: Itv -> Itv -> Itv
 rshInterval x y = rshInterval' (normalizeInterval x) (normalizeInterval y)
   where
@@ -272,7 +276,7 @@ rshInterval x y = rshInterval' (normalizeInterval x) (normalizeInterval y)
         bc = rshift b c
         bd = rshift b d
 
--- Shift right operation, in the case the offset is negative it throws an error
+-- Shift right operation, in the case the offset is negative it throws an error.
 rshift :: ItvVal -> ItvVal -> ItvVal
 -- -inf
 rshift NegInfinity PosInfinity = (Finite 0)
@@ -284,7 +288,7 @@ rshift PosInfinity (Finite x) = if x >= 0 then PosInfinity else error "Impossibl
 rshift PosInfinity PosInfinity = (Finite 0)
 -- finite * ...
 rshift (Finite _) PosInfinity = (Finite 0)
-rshift (Finite x) (Finite y) = if y >= 0 then (Finite (shiftR x y)) else error "Impossible to shift with negative offset"
+rshift (Finite x) (Finite y) = if y >= 0 then (Finite (unsafeShiftR x y)) else error "Impossible to shift with negative offset"
 rshift (Finite _) NegInfinity = error "Impossible to shift with negative offset" 
 
 -- TODO Mod operation 
@@ -295,10 +299,34 @@ modInterval _ _ = undefined
 xorInterval :: Itv -> Itv -> Itv
 xorInterval _ _ = undefined
 
--- TODO Arsh operation
+-- Arsh operation - Right shift with signed values.
 arshInterval :: Itv -> Itv -> Itv
-arshInterval _ _ = undefined
+arshInterval x y = arshInterval' (normalizeInterval x) (normalizeInterval y)
+  where
+    arshInterval' :: Itv -> Itv -> Itv
+    arshInterval' EmptyItv _ = EmptyItv
+    arshInterval' _ EmptyItv = EmptyItv
+    arshInterval' (Itv (a,b)) (Itv (c,d)) = Itv(minimum [ac,ad,bc,bd], maximum [ac,ad,bc,bd])
+      where 
+        ac = arshift a c
+        ad = arshift a d
+        bc = arshift b c
+        bd = arshift b d
 
+-- Arithmetic shift right operation, in the case the offset is negative it throws an error.
+arshift :: ItvVal -> ItvVal -> ItvVal
+-- -inf
+arshift NegInfinity PosInfinity = (Finite (-1))
+arshift NegInfinity (Finite x) = if x >= 0 then NegInfinity else error "Impossible to shift with negative offset"
+arshift NegInfinity NegInfinity = error "Impossible to shift with negative offset"
+-- +inf 
+arshift PosInfinity NegInfinity = error "Impossible to shift with negative offset"
+arshift PosInfinity (Finite x) = if x >= 0 then PosInfinity else error "Impossible to shift with negative offset"
+arshift PosInfinity PosInfinity = (Finite 0)
+-- finite * ...
+arshift (Finite x) PosInfinity = if x >= 0 then (Finite 0) else (Finite (-1))
+arshift (Finite x) (Finite y) = if y >= 0 then (Finite (shiftR x y)) else error "Impossible to shift with negative offset"
+arshift (Finite _) NegInfinity = error "Impossible to shift with negative offset" 
 
 ------------------- Logical Itv Operations ------------------------
 
@@ -371,89 +399,117 @@ narrowingInterval (Itv (x1,x2)) (Itv (y1, y2)) =
 ------------------- Itv Analysis ------------------------
 
 -- Perform the interval analysis on a set of equations.
-intervalAnalysis :: Equations -> ItvState -> [ItvState]
-intervalAnalysis eq initialStateItv = fixpointItvAnalysis eqList state
+intervalAnalysis :: Equations -> ItvState -> ([ItvState], ItvMemory)
+intervalAnalysis eq initialStateItv = fixpointItvAnalysis eqList state memory
     where
         eqList = Map.toList eq 
         state = replicate (length eqList) initialStateItv
+        memory = Map.empty
 
 -- Perform fixpoint computation for the analysis.
-fixpointItvAnalysis :: [(Label, [(Label, Stmt)])] -> [ItvState] -> [ItvState]
-fixpointItvAnalysis eq state =
-    if state == newState then newState else fixpointItvAnalysis eq newState
+fixpointItvAnalysis :: [(Label, [(Label, Stmt)])] -> [ItvState] -> ItvMemory -> ([ItvState], ItvMemory)
+fixpointItvAnalysis eq state mem =
+    if state == newState && mem == newMem then (newState, newMem) else fixpointItvAnalysis eq newState newMem
         where 
-            newState = foldl updateItvState state eq
+            (newState, newMem) = foldl updateItvState (state, mem) eq 
 
 -- This function updates the state of a program point after it is analyzed.
-updateItvState :: [ItvState] -> (Label, [(Label, Stmt)]) -> [ItvState]
-updateItvState state (nodeIdx, eqs) = 
-  before ++ [state'] ++ after
+updateItvState :: ([ItvState], ItvMemory) -> (Label, [(Label, Stmt)]) -> ([ItvState], ItvMemory)
+updateItvState (state, mem) (nodeIdx, eqs) = 
+  ((before ++ [state'] ++ after), newMem)
   where
-    state' = processItvElement Nothing state (nodeIdx, eqs)
+    (state', newMem) = processItvElement Nothing state mem (nodeIdx, eqs)
     before = take nodeIdx state 
     after = drop (nodeIdx + 1) state
 
 -- Process the equations for a specific node, returning the updated state.     
-processItvElement :: Maybe ItvState -> [ItvState] -> (Label, [(Label, Stmt)]) -> ItvState
-processItvElement (Nothing) states (nodeIdx,[]) = states !! nodeIdx
-processItvElement (Just state) _ (_,[]) = state
-processItvElement unionState states (currentNode, ((prevNode, stmt):es)) = 
+processItvElement :: Maybe ItvState -> [ItvState] -> ItvMemory -> (Label, [(Label, Stmt)]) -> (ItvState, ItvMemory)
+processItvElement (Nothing) states mem (nodeIdx,[]) = (states !! nodeIdx, mem)
+processItvElement (Just state) _ mem (_,[]) = (state, mem)
+processItvElement unionState states mem (currentNode, ((prevNode, stmt):es)) = 
     case unionState of
-      Nothing -> processItvElement (Just state) states (currentNode, es)
-      Just uState -> processItvElement(Just (unionStt uState state)) states (currentNode, es)
+      Nothing -> processItvElement (Just state') states newMem (currentNode, es)
+      Just uState -> processItvElement(Just (unionStt uState state')) states newMem (currentNode, es)
   where 
     prevState = (states !! prevNode)
-    state = updateItvUsingStmt prevState stmt 
+    (state', newMem) = updateItvUsingStmt prevState mem stmt 
 
 -- Update a node's state by analysing the the equation and then updating the interval(s) associated with 
 -- the register(s) used in the equation. It also updates the memory value for memory handling operations.
-updateItvUsingStmt :: ItvState -> Stmt -> ItvState
+updateItvUsingStmt :: ItvState -> ItvMemory -> Stmt -> (ItvState, ItvMemory)
 
 -- Process Binary operations
-updateItvUsingStmt state (AssignReg r (Bin e)) =     
+updateItvUsingStmt state mem (AssignReg r (Bin e)) =     
   case lookup r state of 
       Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
-      _ -> state'
+      _ -> (state', mem)
   where
     newItv = processBinaryExpression state e
     state' = updateRegisterValue r newItv state
 
 -- Process Mov operation
-updateItvUsingStmt state (AssignReg r (Mv ri)) =
+updateItvUsingStmt state mem (AssignReg r (Mv ri)) =
     case lookup r state of 
         Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
-        _ -> state'
+        _ -> (state', mem)
     where 
         newValue = getRegisterImmediateInterval state ri
         state' = updateRegisterValue r newValue state
 
 -- Process Unary operations
-updateItvUsingStmt state (AssignReg r (Un e)) = 
+updateItvUsingStmt state mem (AssignReg r (Un e)) = 
   case lookup r state of 
       Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
-      _ -> state'
+      _ -> (state', mem)
   where
     newItv = processUnaryExpression state e
     state' = updateRegisterValue r newItv state
 
--- TODO Process Store operations
-updateItvUsingStmt state (StoreInMem r offset ri) = undefined
+-- Process Store operations
+updateItvUsingStmt state mem (StoreInMem r offset ri) = 
+  case lookup r state of 
+      Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
+      _ -> (state, mem')
+  where
+    value = getRegisterInterval state r
+    index = getRegisterImmediateInterval state ri
+    indexOff = case offset of
+      Just n -> addInterval index (constantInterval (fromIntegral n))
+      Nothing -> index
+    mem' = updateMemory mem value indexOff 
 
--- TODO Process Load operation with register as index
-updateItvUsingStmt state (LoadFromMemReg r r' offset) = undefined
+-- Process Load operation with register as index
+updateItvUsingStmt state mem (LoadFromMemReg r r' offset) = 
+    case lookup r state of 
+      Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
+      _ -> (state', mem)
+  where
+    index = getRegisterInterval state r'
+    indexOff = case offset of
+      Just n -> addInterval index (constantInterval (fromIntegral n))
+      Nothing -> index
+    itv = getMemoryInterval mem indexOff
+    state' = updateRegisterValue r itv state
 
--- TODO Process Load operation with Imm as index
-updateItvUsingStmt state (LoadFromMemImm r i) = undefined
+-- Process Load operation with Imm as index
+updateItvUsingStmt state mem (LoadFromMemImm r i) =   
+  case lookup r state of 
+      Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
+      _ -> (state', mem)
+  where
+    newItv = case Map.lookup (fromIntegral i) mem of
+          Just itv -> itv
+          Nothing -> EmptyItv
+    state' = updateRegisterValue r newItv state
 
 -- Process conditional jumps
-updateItvUsingStmt state (If cond _) = processCondition state cond
+updateItvUsingStmt state mem (If cond _) = (processCondition state cond, mem)
 
 -- Process Unconditional jump
-updateItvUsingStmt state (CallOp _) = state
+updateItvUsingStmt state mem (CallOp _) = (state, mem)
 
 -- Process Call operation
-updateItvUsingStmt state (Goto _) = state
-
+updateItvUsingStmt state mem (Goto _) = (state, mem)
 
 ------------- Functions related to states handling ------------------------
 
@@ -554,7 +610,112 @@ updateRegisterValue r itv = map (\(reg, i) ->
     if reg == r 
         then (reg, itv)
         else (reg, i))
-  
+
+-- Function that updates the memory using an interval as index. 
+-- It uses the interval as index, i.e. updates each memory cell corresponding to
+-- every index in the interval with the value.
+updateMemory :: ItvMemory -> Itv -> Itv -> ItvMemory
+updateMemory mem _ (EmptyItv) = mem 
+updateMemory mem value (Itv (NegInfinity, PosInfinity)) = foldl (\m i -> Map.insert i value m) mem [0..512]
+updateMemory mem value (Itv (NegInfinity, (Finite y))) = 
+  if y < 0 
+    then mem 
+    else if y < 512
+      then foldl (\m i -> Map.insert i value m) mem [0..y] 
+      else foldl (\m i -> Map.insert i value m) mem [0..512] 
+updateMemory mem value (Itv ((Finite x), PosInfinity)) = 
+  if x < 0 
+    then  foldl (\m i -> Map.insert i value m) mem [0..512] 
+    else if x < 512
+      then foldl (\m i -> Map.insert i value m) mem [x..512] 
+      else mem
+updateMemory mem value (Itv ((Finite x), (Finite y))) =   
+  if x < 0 && y < 0
+    then mem 
+    else if x < 0 && y < 512
+      then foldl (\m i -> Map.insert i value m) mem [0..y] 
+      else if x < 0 && y > 512
+        then foldl (\m i -> Map.insert i value m) mem [0..512] 
+        else if x < 512 && y < 512
+          then foldl (\m i -> Map.insert i value m) mem [x..y] 
+          else if x < 512 && y > 512
+            then foldl (\m i -> Map.insert i value m) mem [x..512] 
+            else if x > 512 && y > 512
+              then mem
+              else updateMemory mem value (normalizeInterval (Itv ((Finite x), (Finite y))))
+updateMemory mem value x = updateMemory mem value (normalizeInterval x)
+
+-- Function that takes an interval with indexes and return the biggest possible interval from the
+-- values mapped by the indexes in memory.
+getMemoryInterval :: ItvMemory -> Itv -> Itv
+getMemoryInterval _ EmptyItv = EmptyItv
+getMemoryInterval mem (Itv (NegInfinity, PosInfinity)) = itv
+  where
+    intervals = mapMaybe (`Map.lookup` mem) [0..512]
+    itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
+getMemoryInterval mem (Itv (NegInfinity, (Finite y))) = itv
+  where
+    intervals =   
+      if y < 0 
+        then [EmptyItv]
+        else if y < 512
+          then mapMaybe (`Map.lookup` mem) [0..y] 
+          else mapMaybe (`Map.lookup` mem) [0..512] 
+    itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
+getMemoryInterval mem (Itv ((Finite x), PosInfinity)) = itv
+    where
+      intervals =   
+        if x < 0 
+          then mapMaybe (`Map.lookup` mem) [0..512] 
+          else if x < 512
+            then mapMaybe (`Map.lookup` mem) [x..512] 
+            else [EmptyItv]
+      itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
+getMemoryInterval mem (Itv ((Finite x), (Finite y))) = itv
+  where
+    intervals =
+      if x < 0 && y < 0
+        then [EmptyItv] 
+        else if x < 0 && y < 512
+          then mapMaybe (`Map.lookup` mem) [0..y] 
+          else if x < 0 && y > 512
+            then mapMaybe (`Map.lookup` mem) [0..512] 
+            else if x < 512 && y < 512
+              then mapMaybe (`Map.lookup` mem) [x..y] 
+              else if x < 512 && y > 512
+                then mapMaybe (`Map.lookup` mem) [x..512] 
+                else if x > 512 && y > 512
+                  then [EmptyItv]
+                  else [getMemoryInterval mem (normalizeInterval (Itv ((Finite x), (Finite y))))]
+    itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
+getMemoryInterval mem x = getMemoryInterval mem (normalizeInterval x)
+
+-- Filter the lower bound and returns the smallest
+-- In the case it is an Empty interval I return the greatest possible 
+-- value (PosInfinity), it is only selected if the only possibility is 
+-- the result being EmptyItv.
+findLowerBound :: [Itv] -> ItvVal
+findLowerBound  = minimum . map extractLowerBound
+  where
+    extractLowerBound :: Itv -> ItvVal
+    extractLowerBound EmptyItv = PosInfinity
+    extractLowerBound (Itv (Finite x, _)) = (Finite x)
+    extractLowerBound (Itv (NegInfinity, _)) = NegInfinity
+    extractLowerBound x = extractLowerBound (normalizeInterval x)
+
+-- Filter the upper bound and returns the greatest
+-- In the case it is an Empty interval I return the lowest possible 
+-- value (NegInfinity), it is only selected if the only possibility is 
+-- the result being EmptyItv.
+findUpperBound :: [Itv] -> ItvVal
+findUpperBound  = maximum . map extractUpperBound
+  where
+    extractUpperBound :: Itv -> ItvVal
+    extractUpperBound EmptyItv = NegInfinity
+    extractUpperBound (Itv (_, Finite y)) = (Finite y)
+    extractUpperBound (Itv (_, PosInfinity)) = PosInfinity
+    extractUpperBound x = extractUpperBound (normalizeInterval x)
+
 -- Union of two states.
 unionStt :: ItvState -> ItvState -> ItvState
 unionStt = zipWith combine
