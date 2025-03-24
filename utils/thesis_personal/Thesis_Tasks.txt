@@ -21,6 +21,6 @@ Mathematical and theoretical tasks
 *DONE - Typing system/Inference rules
 *DONE - Finish basic Report sections
 - PART 2
-?IN_PROGRESS - Prove soundness and completeness
+?IN_PROGRESS - Prove soundness/completeness/non interference
+- PART 3
 TODO - Typing system/Inference rules for extended system
-TODO - Define Attacker model
