@@ -34,4 +34,6 @@ R:
 A program being typable? refers to a program that can be assigned a valid type according to a given type system.
 A typable program is one that satisfies the security type rules ensuring that it does not violate information flow policies.
 R:
+Attacker model?
+R:
 --------------------------
