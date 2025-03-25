@@ -20,20 +20,15 @@ UnaryExp: The big endian and little endian change the byte order, how could I ha
 R: Identity
 --------------------------
 Should I normalize the intervals before every operation?
-R:
+R: There is no problem of too many normalization
 Case for the division, what if the element can be 0?
-R: 
+R: Ignore it
 Take a look at or/and, are the intervals correct?
-R:
+R: Yes
 What about XOR, I cant find any ideas of how to do it?
-R:
+R: Do not invest to much on it, over aproximate it
 Mod, show https://stackoverflow.com/questions/31057473/calculating-the-modulo-of-two-intervals.
-R: 
-Is the policy kv is basically the exp judgment?
-R:
-A program being typable? refers to a program that can be assigned a valid type according to a given type system.
-A typable program is one that satisfies the security type rules ensuring that it does not violate information flow policies.
-R:
+R: Same as the above
 Attacker model?
-R:
+R: A paragraph in the introduction is enough for now atleast
 --------------------------
