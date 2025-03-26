@@ -11,46 +11,49 @@ import Ebpf.Asm
 
 -- Perform the union of two intervals.
 unionInterval :: Itv -> Itv -> Itv
-unionInterval EmptyItv x = x
-unionInterval x EmptyItv = x
--- case (-inf, +inf) \/ ...
-unionInterval (Itv (NegInfinity, PosInfinity)) _ = Itv (NegInfinity, PosInfinity)  
--- case (-inf,x) \/ ...
-unionInterval (Itv (NegInfinity, Finite _)) (Itv (_, PosInfinity)) = Itv (NegInfinity, PosInfinity)
-unionInterval (Itv (NegInfinity, Finite x)) (Itv (_, Finite y)) = Itv (NegInfinity, Finite (max x y))
--- case (x,+inf) \/ ...
-unionInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, _)) = Itv (Finite (min x1 y1), PosInfinity)
-unionInterval (Itv (Finite _, PosInfinity)) (Itv (NegInfinity, _)) = Itv (NegInfinity, PosInfinity)
--- case (x1, x2) \/ ...
-unionInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (min x1 y1), Finite (max x2 y2))
-unionInterval (Itv (Finite _, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (max x2 y2))
-unionInterval (Itv (Finite x1, Finite _)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (min x1 y1), PosInfinity)
-unionInterval (Itv (Finite _, Finite _)) (Itv (NegInfinity, PosInfinity)) = Itv (NegInfinity, PosInfinity)  
--- case when one of the intervals is not correctly formatted
-unionInterval x y = unionInterval (normalizeInterval x) (normalizeInterval y)
+unionInterval a b = unionInterval' (normalizeInterval a) (normalizeInterval b)
+  where 
+    unionInterval' :: Itv -> Itv -> Itv
+    unionInterval' EmptyItv x = x
+    unionInterval' x EmptyItv = x
+    -- case (-inf, +inf) \/ ...
+    unionInterval' (Itv (NegInfinity, PosInfinity)) _ = Itv (NegInfinity, PosInfinity)  
+    -- case (-inf,x) \/ ...
+    unionInterval' (Itv (NegInfinity, Finite _)) (Itv (_, PosInfinity)) = Itv (NegInfinity, PosInfinity)
+    unionInterval' (Itv (NegInfinity, Finite x)) (Itv (_, Finite y)) = Itv (NegInfinity, Finite (max x y))
+    -- case (x,+inf) \/ ...
+    unionInterval' (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, _)) = Itv (Finite (min x1 y1), PosInfinity)
+    unionInterval' (Itv (Finite _, PosInfinity)) (Itv (NegInfinity, _)) = Itv (NegInfinity, PosInfinity)
+    -- case (x1, x2) \/ ...
+    unionInterval' (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (min x1 y1), Finite (max x2 y2))
+    unionInterval' (Itv (Finite _, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (max x2 y2))
+    unionInterval' (Itv (Finite x1, Finite _)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (min x1 y1), PosInfinity)
+    unionInterval' (Itv (Finite _, Finite _)) (Itv (NegInfinity, PosInfinity)) = Itv (NegInfinity, PosInfinity)  
+    unionInterval' x y = error $ "It shouldnt reach here: " ++ (show x) ++ " " ++ (show y) -- Just to avoid non-exhaustive pattern
 
 -- Perform the intersection of two intervals.
 intersectionInterval :: Itv -> Itv -> Itv
-intersectionInterval EmptyItv _ = EmptyItv
-intersectionInterval _ EmptyItv = EmptyItv
--- case (-inf, +inf) /\ ...
-intersectionInterval (Itv (NegInfinity, PosInfinity)) x = x
--- ... /\ case (-inf, +inf)
-intersectionInterval x (Itv (NegInfinity, PosInfinity)) = x
--- case (-inf,x) /\ ...
-intersectionInterval (Itv (NegInfinity, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (min x2 y2))
-intersectionInterval (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (Finite y1, Finite x2)
-intersectionInterval (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite y1, Finite (min x2 y2))
--- case (x,+inf) /\ ...
-intersectionInterval (Itv (Finite x1, PosInfinity)) (Itv (NegInfinity, Finite y2)) = Itv (Finite x1, Finite y2)
-intersectionInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (max x1 y1), PosInfinity)
-intersectionInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, Finite y2)) = Itv (Finite (max x1 y1), Finite y2)
--- case (x1,x2) /\ ...
-intersectionInterval (Itv (Finite x1, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (Finite x1, Finite (min x2 y2))
-intersectionInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (max x1 y1), Finite x2)
-intersectionInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (max x1 y1), Finite (min x2 y2))
--- case when one of the intervals is not correctly formatted
-intersectionInterval x y = intersectionInterval (normalizeInterval x) (normalizeInterval y)
+intersectionInterval a b = intersectionInterval' (normalizeInterval a) (normalizeInterval b)
+  where
+    intersectionInterval' EmptyItv _ = EmptyItv
+    intersectionInterval' _ EmptyItv = EmptyItv
+    -- case (-inf, +inf) /\ ...
+    intersectionInterval' (Itv (NegInfinity, PosInfinity)) x = x
+    -- ... /\ case (-inf, +inf)
+    intersectionInterval' x (Itv (NegInfinity, PosInfinity)) = x
+    -- case (-inf,x) /\ ...
+    intersectionInterval' (Itv (NegInfinity, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (min x2 y2))
+    intersectionInterval' (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (Finite y1, Finite x2)
+    intersectionInterval' (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite y1, Finite (min x2 y2))
+    -- case (x,+inf) /\ ...
+    intersectionInterval' (Itv (Finite x1, PosInfinity)) (Itv (NegInfinity, Finite y2)) = Itv (Finite x1, Finite y2)
+    intersectionInterval' (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (max x1 y1), PosInfinity)
+    intersectionInterval' (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, Finite y2)) = Itv (Finite (max x1 y1), Finite y2)
+    -- case (x1,x2) /\ ...
+    intersectionInterval' (Itv (Finite x1, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (Finite x1, Finite (min x2 y2))
+    intersectionInterval' (Itv (Finite x1, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (max x1 y1), Finite x2)
+    intersectionInterval' (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (max x1 y1), Finite (min x2 y2))
+    intersectionInterval' x y = error $ "It shouldnt reach here: " ++ (show x) ++ " " ++ (show y) -- Just to avoid non-exhaustive pattern
 
 -- Normalize the interval, i.e. correct the intervals in case of bad formatting.
 normalizeInterval :: Itv -> Itv
@@ -70,49 +73,51 @@ constantInterval x = (Itv (Finite x, Finite x))
 
 -- Add operation [+] ([a,b], [c,d]) = [a+c,b+d].
 addInterval :: Itv -> Itv -> Itv
-addInterval EmptyItv _ = EmptyItv
-addInterval _ EmptyItv = EmptyItv
--- case (-inf, +inf) + ...
-addInterval (Itv (NegInfinity, PosInfinity)) _ = (Itv (NegInfinity, PosInfinity))
--- case ... + (-inf, +inf)
-addInterval _ (Itv (NegInfinity, PosInfinity)) = (Itv (NegInfinity, PosInfinity))
--- case (-inf,x) + ...
-addInterval (Itv (NegInfinity, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (x2+y2))
-addInterval (Itv (NegInfinity, Finite _)) (Itv (Finite _, PosInfinity)) = Itv (NegInfinity, PosInfinity)
-addInterval (Itv (NegInfinity, Finite x2)) (Itv (Finite _, Finite y2)) = Itv (NegInfinity, Finite (x2+y2))
--- case (x,+inf) + ...
-addInterval (Itv (Finite _, PosInfinity)) (Itv (NegInfinity, Finite _)) = Itv (NegInfinity, PosInfinity)
-addInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (x1+y1), PosInfinity)
-addInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, Finite _)) = Itv (Finite (x1+y1), PosInfinity)
--- case (x1,x2) + ...
-addInterval  (Itv (Finite _, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (x2 + y2))
-addInterval (Itv (Finite x1, Finite _)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (x1+y1), PosInfinity)
-addInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (x1 + y1), Finite (x2 + y2))
--- case when one of the intervals is not correctly formatted
-addInterval x y = addInterval (normalizeInterval x) (normalizeInterval y)
+addInterval a b = addInterval' (normalizeInterval a) (normalizeInterval b)
+  where
+    addInterval' EmptyItv _ = EmptyItv
+    addInterval' _ EmptyItv = EmptyItv
+    -- case (-inf, +inf) + ...
+    addInterval' (Itv (NegInfinity, PosInfinity)) _ = (Itv (NegInfinity, PosInfinity))
+    -- case ... + (-inf, +inf)
+    addInterval' _ (Itv (NegInfinity, PosInfinity)) = (Itv (NegInfinity, PosInfinity))
+    -- case (-inf,x) + ...
+    addInterval' (Itv (NegInfinity, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (x2+y2))
+    addInterval' (Itv (NegInfinity, Finite _)) (Itv (Finite _, PosInfinity)) = Itv (NegInfinity, PosInfinity)
+    addInterval' (Itv (NegInfinity, Finite x2)) (Itv (Finite _, Finite y2)) = Itv (NegInfinity, Finite (x2+y2))
+    -- case (x,+inf) + ...
+    addInterval' (Itv (Finite _, PosInfinity)) (Itv (NegInfinity, Finite _)) = Itv (NegInfinity, PosInfinity)
+    addInterval' (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (x1+y1), PosInfinity)
+    addInterval' (Itv (Finite x1, PosInfinity)) (Itv (Finite y1, Finite _)) = Itv (Finite (x1+y1), PosInfinity)
+    -- case (x1,x2) + ...
+    addInterval'  (Itv (Finite _, Finite x2)) (Itv (NegInfinity, Finite y2)) = Itv (NegInfinity, Finite (x2 + y2))
+    addInterval' (Itv (Finite x1, Finite _)) (Itv (Finite y1, PosInfinity)) = Itv (Finite (x1+y1), PosInfinity)
+    addInterval' (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (x1 + y1), Finite (x2 + y2))
+    addInterval' x y = error $ "It shouldnt reach here: " ++ (show x) ++ " " ++ (show y) -- Just to avoid non-exhaustive pattern
 
 -- Sub operation [-] ([a,b], [c,d]) = [a-d,b-c] .
 subInterval :: Itv -> Itv -> Itv
-subInterval EmptyItv _ = EmptyItv
-subInterval _ EmptyItv = EmptyItv
--- case (-inf, +inf) - ...
-subInterval (Itv (NegInfinity, PosInfinity)) _ = (Itv (NegInfinity, PosInfinity))
--- case .. - (-inf, +inf)
-subInterval _ (Itv (NegInfinity, PosInfinity)) = (Itv (NegInfinity, PosInfinity))
--- case (-inf,x) + ...
-subInterval (Itv (NegInfinity, Finite _)) (Itv (NegInfinity, Finite _)) = Itv (NegInfinity, PosInfinity)
-subInterval (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (NegInfinity, Finite (x2-y1))
-subInterval (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, Finite _)) = Itv (NegInfinity, Finite (x2+y1))
--- case (x,+inf) + ...
-subInterval (Itv (Finite x1, PosInfinity)) (Itv (NegInfinity, Finite y2)) = Itv (Finite (x1-y2), PosInfinity)
-subInterval (Itv (Finite _, PosInfinity)) (Itv (Finite _, PosInfinity)) = Itv (NegInfinity, PosInfinity)
-subInterval (Itv (Finite x1, PosInfinity)) (Itv (Finite _, Finite y2)) = Itv (Finite (x1+y2), PosInfinity)
--- case (x1,x2) + ...
-subInterval  (Itv (Finite x1, Finite _)) (Itv (NegInfinity, Finite y2)) = Itv (Finite (x1 - y2), PosInfinity)
-subInterval (Itv (Finite _, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (NegInfinity, Finite (x2 - y1))
-subInterval (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (x1 - y2), Finite (x2 - y1))
--- case when one of the intervals is not correctly formatted
-subInterval x y = subInterval (normalizeInterval x) (normalizeInterval y)
+subInterval a b = subInterval' (normalizeInterval a) (normalizeInterval b)
+  where
+    subInterval' EmptyItv _ = EmptyItv
+    subInterval' _ EmptyItv = EmptyItv
+    -- case (-inf, +inf) - ...
+    subInterval' (Itv (NegInfinity, PosInfinity)) _ = (Itv (NegInfinity, PosInfinity))
+    -- case .. - (-inf, +inf)
+    subInterval' _ (Itv (NegInfinity, PosInfinity)) = (Itv (NegInfinity, PosInfinity))
+    -- case (-inf,x) + ...
+    subInterval' (Itv (NegInfinity, Finite _)) (Itv (NegInfinity, Finite _)) = Itv (NegInfinity, PosInfinity)
+    subInterval' (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (NegInfinity, Finite (x2-y1))
+    subInterval' (Itv (NegInfinity, Finite x2)) (Itv (Finite y1, Finite _)) = Itv (NegInfinity, Finite (x2+y1))
+    -- case (x,+inf) + ...
+    subInterval' (Itv (Finite x1, PosInfinity)) (Itv (NegInfinity, Finite y2)) = Itv (Finite (x1-y2), PosInfinity)
+    subInterval' (Itv (Finite _, PosInfinity)) (Itv (Finite _, PosInfinity)) = Itv (NegInfinity, PosInfinity)
+    subInterval' (Itv (Finite x1, PosInfinity)) (Itv (Finite _, Finite y2)) = Itv (Finite (x1+y2), PosInfinity)
+    -- case (x1,x2) + ...
+    subInterval' (Itv (Finite x1, Finite _)) (Itv (NegInfinity, Finite y2)) = Itv (Finite (x1 - y2), PosInfinity)
+    subInterval' (Itv (Finite _, Finite x2)) (Itv (Finite y1, PosInfinity)) = Itv (NegInfinity, Finite (x2 - y1))
+    subInterval' (Itv (Finite x1, Finite x2)) (Itv (Finite y1, Finite y2)) = Itv (Finite (x1 - y2), Finite (x2 - y1))
+    subInterval' x y = error $ "It shouldnt reach here: " ++ (show x) ++ " " ++ (show y) -- Just to avoid non-exhaustive pattern
 
 -- Mul operation [*] ([a,b], [c,d]) = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)].
 mulInterval :: Itv -> Itv -> Itv
@@ -178,21 +183,27 @@ invert ((Finite 0), (Finite 0)) = (NegInfinity, PosInfinity)
 invert ((Finite 0), (Finite y)) = ((Finite (1 `div` y)), PosInfinity)
 invert ((Finite x), (Finite 0)) = (NegInfinity, (Finite (1 `div` x)))
 invert ((Finite x), (Finite y)) = ((Finite (1 `div` y)), (Finite (1 `div` x)))
-invert (x,y) = error $ "It shouldnt reach here:" ++ (show x) ++ (show y)
+invert (x,y) = error $ "It shouldnt reach here: " ++ (show x) ++ " " ++ (show y) -- Just to avoid non-exhaustive
 
 -- Or operation, the minimum is always the minimum value a interval can take and
 -- the maximum is infinity.
 orInterval :: Itv -> Itv -> Itv
-orInterval EmptyItv _ = EmptyItv
-orInterval _ EmptyItv = EmptyItv
-orInterval (Itv (a,_)) (Itv (c,_)) = Itv(minimum [a,c], PosInfinity)
+orInterval x y = orInterval' (normalizeInterval x) (normalizeInterval y)
+  where
+    orInterval' :: Itv -> Itv -> Itv
+    orInterval' EmptyItv _ = EmptyItv
+    orInterval' _ EmptyItv = EmptyItv
+    orInterval' (Itv (a,_)) (Itv (c,_)) = Itv(minimum [a,c], PosInfinity)
 
 -- And operation, the minimum value is negative infinity and maximum the highest
 -- value one of the intervals can take.
 andInterval :: Itv -> Itv -> Itv
-andInterval _ EmptyItv = EmptyItv
-andInterval EmptyItv _ = EmptyItv
-andInterval (Itv (_,b)) (Itv (_,d)) = Itv(NegInfinity, maximum [b,d])
+andInterval x y = andInterval' (normalizeInterval x) (normalizeInterval y)
+  where
+    andInterval' :: Itv -> Itv -> Itv
+    andInterval' _ EmptyItv = EmptyItv
+    andInterval' EmptyItv _ = EmptyItv
+    andInterval' (Itv (_,b)) (Itv (_,d)) = Itv(NegInfinity, maximum [b,d])
 
 
 -- Lsh operation.
@@ -253,13 +264,40 @@ rshift (Finite _) PosInfinity = (Finite 0)
 rshift (Finite x) (Finite y) = if y >= 0 then (Finite (unsafeShiftR x y)) else error "Impossible to shift with negative offset"
 rshift (Finite _) NegInfinity = error "Impossible to shift with negative offset" 
 
--- TODO Mod operation 
+-- Mod operation, if divisor can be negative then the result can take negative result, otherwise the minimum it takes is 0 
 modInterval :: Itv -> Itv -> Itv
-modInterval _ _ = undefined
+modInterval x y = modInterval' (normalizeInterval x) (normalizeInterval y)
+  where 
+    modInterval' :: Itv -> Itv -> Itv 
+    modInterval' EmptyItv _ = EmptyItv
+    modInterval' _ EmptyItv = EmptyItv
+    modInterval' (Itv (NegInfinity, _)) (Itv (y1,y2)) = if y1 < (Finite 0) || y2 < (Finite 0) then Itv (NegInfinity, PosInfinity) else Itv (Finite 0, PosInfinity)
+    modInterval' (Itv (_, PosInfinity)) (Itv (y1,y2)) = if y1 < (Finite 0) || y2 < (Finite 0) then Itv (NegInfinity, PosInfinity) else Itv (Finite 0, PosInfinity)
+    modInterval' (Itv (Finite x1, Finite x2)) (Itv (y1,y2)) = if y1 < (Finite 0) || y2 < (Finite 0) then Itv (Finite (-v), Finite v) else Itv (Finite 0, Finite v) 
+      where
+        v = max (abs x1) (abs x2)
+    modInterval' a b = error $ "Shouldnt reach here: " ++ show a ++ " " ++ show b
 
--- TODO Xor operation 
+-- Xor operation, gets the highest value number of bits and returns the interval of values possible with those bits 
 xorInterval :: Itv -> Itv -> Itv
-xorInterval _ _ = undefined
+xorInterval x y = xorInterval' (normalizeInterval x) (normalizeInterval y)
+  where 
+    xorInterval' :: Itv -> Itv -> Itv 
+    xorInterval' EmptyItv _ = EmptyItv
+    xorInterval' _ EmptyItv = EmptyItv
+    xorInterval' (Itv (x1,x2)) (Itv (y1,y2)) = r
+      where 
+        maxi = maximum [abs' x1, abs' x2, abs' y1, abs' y2]
+        r = case maxi of
+              NegInfinity -> Itv (NegInfinity, PosInfinity) -- Cannot happen
+              PosInfinity -> Itv (NegInfinity, PosInfinity)
+              Finite 0 -> Itv (Finite 0, Finite 0)
+              Finite a -> Itv ((Finite (-(ceiling $ logBase 2 $ (fromIntegral a :: Double)))), Finite (ceiling $ logBase 2 $ (fromIntegral a :: Double)))
+
+abs' :: ItvVal -> ItvVal
+abs' (NegInfinity) = PosInfinity
+abs' (PosInfinity) = PosInfinity
+abs' (Finite x) = Finite (abs x)
 
 -- Arsh operation - Right shift with signed values.
 arshInterval :: Itv -> Itv -> Itv
@@ -294,47 +332,46 @@ arshift (Finite _) NegInfinity = error "Impossible to shift with negative offset
 
 -- Equal operation [=] ([a,b],[c,d]) = ([a,b] /\ [c,d], [a,b] /\ [c,d]).
 eqInterval :: Itv -> Itv -> (Itv, Itv)
-eqInterval x y = (intersectionInterval x y, intersectionInterval x y)
+eqInterval x y = eqInterval' (normalizeInterval x) (normalizeInterval y)
+  where
+    eqInterval' a b = (intersectionInterval a b, intersectionInterval a b)
 
 -- Less than operation [<] ([a,b],[c,d]) = ([a,b] /\ [-inf, d-1], [a+1,+inf] /\ [c,d]).
 ltInterval :: Itv -> Itv -> (Itv, Itv)
-ltInterval EmptyItv _ = (EmptyItv, EmptyItv)
-ltInterval _ EmptyItv = (EmptyItv, EmptyItv)
--- case (x1,_) < (_,y1)
-ltInterval (Itv (Finite x1,x2)) (Itv (y1,Finite y2)) = 
-  (intersectionInterval (Itv (Finite x1, x2)) (Itv (NegInfinity, Finite (y2-1))),
-   intersectionInterval (Itv (Finite (x1 + 1), PosInfinity)) (Itv (y1, Finite y2)))
--- case (x1,_) < (_,+inf) 
-ltInterval (Itv (Finite x1,x2)) (Itv (y1,PosInfinity)) = 
-  (intersectionInterval (Itv (Finite x1, x2)) (Itv (NegInfinity, PosInfinity)),
-   intersectionInterval (Itv (Finite (x1 + 1), PosInfinity)) (Itv (y1, PosInfinity)))
--- case (-inf,_) < (_,y1)
-ltInterval (Itv (NegInfinity,x2)) (Itv (y1,Finite y2)) = 
-  (intersectionInterval (Itv (NegInfinity, x2)) (Itv (NegInfinity, Finite (y2-1))),
-   intersectionInterval (Itv (NegInfinity, PosInfinity)) (Itv (y1, Finite y2)))
--- case (-inf,_) < (_,+inf)
-ltInterval (Itv (NegInfinity,x2)) (Itv (y1,PosInfinity)) = 
-  (intersectionInterval (Itv (NegInfinity, x2)) (Itv (NegInfinity, PosInfinity)),
-   intersectionInterval (Itv (NegInfinity, PosInfinity)) (Itv (y1, PosInfinity)))
--- case when one of the intervals is not correctly formatted
-ltInterval x y = ltInterval (normalizeInterval x) (normalizeInterval y)
+ltInterval a b = ltInterval' (normalizeInterval a) (normalizeInterval b)
+  where
+    ltInterval' :: Itv -> Itv -> (Itv, Itv)
+    ltInterval' EmptyItv _ = (EmptyItv, EmptyItv)
+    ltInterval' _ EmptyItv = (EmptyItv, EmptyItv)
+    -- case (x1,_) < (_,y1)
+    ltInterval' (Itv (Finite x1,x2)) (Itv (y1,Finite y2)) = 
+      (intersectionInterval (Itv (Finite x1, x2)) (Itv (NegInfinity, Finite (y2-1))),
+      intersectionInterval (Itv (Finite (x1 + 1), PosInfinity)) (Itv (y1, Finite y2)))
+    -- case (x1,_) < (_,+inf) 
+    ltInterval' (Itv (Finite x1,x2)) (Itv (y1,PosInfinity)) = 
+      (intersectionInterval (Itv (Finite x1, x2)) (Itv (NegInfinity, PosInfinity)),
+      intersectionInterval (Itv (Finite (x1 + 1), PosInfinity)) (Itv (y1, PosInfinity)))
+    -- case (-inf,_) < (_,y1)
+    ltInterval' (Itv (NegInfinity,x2)) (Itv (y1,Finite y2)) = 
+      (intersectionInterval (Itv (NegInfinity, x2)) (Itv (NegInfinity, Finite (y2-1))),
+      intersectionInterval (Itv (NegInfinity, PosInfinity)) (Itv (y1, Finite y2)))
+    -- case (-inf,_) < (_,+inf)
+    ltInterval' (Itv (NegInfinity,x2)) (Itv (y1,PosInfinity)) = 
+      (intersectionInterval (Itv (NegInfinity, x2)) (Itv (NegInfinity, PosInfinity)),
+      intersectionInterval (Itv (NegInfinity, PosInfinity)) (Itv (y1, PosInfinity)))
+    -- case when one of the intervals is not correctly formatted
+    ltInterval' x y = error $ "It shouldnt reach here: " ++ (show x) ++ " " ++ (show y) -- Just to avoid non-exhaustive
 
--- Normalize the intervals before performing the less or equal than operation.
+-- Less or equal than operation [<=] ([a,b],[c,d]) = ([a,b] /\ [-inf, d], [a,+inf] /\ [c,d]).
 leqInterval :: Itv -> Itv -> (Itv, Itv)
-leqInterval itv1 itv2 = leqInterval' itv1' itv2'
+leqInterval itv1 itv2 = leqInterval' (normalizeInterval itv1) (normalizeInterval itv2)
   where 
-    itv1' = normalizeInterval itv1
-    itv2' = normalizeInterval itv2
-
--- Peform the actual less or equal than operation:
--- Less than operation [<=] ([a,b],[c,d]) = ([a,b] /\ [-inf, d], [a,+inf] /\ [c,d]).
-leqInterval' :: Itv -> Itv -> (Itv, Itv)
-leqInterval' EmptyItv _ = (EmptyItv, EmptyItv)
-leqInterval' _ EmptyItv = (EmptyItv, EmptyItv)
-leqInterval' (Itv (x1,x2)) (Itv (y1,y2)) = 
-   (intersectionInterval (Itv (x1,x2)) (Itv (NegInfinity, y2)),
-   intersectionInterval (Itv (x1,PosInfinity)) (Itv (y1,y2)))
-
+    leqInterval' :: Itv -> Itv -> (Itv, Itv)
+    leqInterval' EmptyItv _ = (EmptyItv, EmptyItv)
+    leqInterval' _ EmptyItv = (EmptyItv, EmptyItv)
+    leqInterval' (Itv (x1,x2)) (Itv (y1,y2)) = 
+      (intersectionInterval (Itv (x1,x2)) (Itv (NegInfinity, y2)),
+      intersectionInterval (Itv (x1,PosInfinity)) (Itv (y1,y2)))
 
 ------------------- Widening & Narrowing ------------------------
 
@@ -415,7 +452,7 @@ updateItvUsingStmt state mem (AssignReg r (Mv ri)) =
         Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
         _ -> (state', mem)
     where 
-        newValue = getRegisterImmediateInterval state ri
+        newValue = normalizeInterval $ getRegisterImmediateInterval state ri
         state' = updateRegisterValue r newValue state
 
 -- Process Unary operations
@@ -450,7 +487,7 @@ updateItvUsingStmt state mem (LoadFromMemReg r r' offset) =
     indexOff = case offset of
       Just n -> addInterval index (constantInterval (fromIntegral n))
       Nothing -> index
-    itv = getMemoryInterval mem indexOff
+    itv = normalizeInterval $ getMemoryInterval mem indexOff
     state' = updateRegisterValue r itv state
 
 -- Process Load operation with Imm as index
@@ -460,7 +497,7 @@ updateItvUsingStmt state mem (LoadFromMemImm r i) =
       _ -> (state', mem)
   where
     newItv = case Map.lookup (fromIntegral i) mem of
-          Just itv -> itv
+          Just itv -> normalizeInterval $ itv
           Nothing -> EmptyItv
     state' = updateRegisterValue r newItv state
 
@@ -505,8 +542,8 @@ processBinaryExpression' fun r ri state = fun op1 op2
 processUnaryExpression :: ItvState -> UnaryExp -> Itv
 processUnaryExpression state e =
     case e of 
-    LeOp r -> getRegisterInterval state r -- Identity
-    BeOp r -> getRegisterInterval state r -- Identity
+    LeOp r -> normalizeInterval $ getRegisterInterval state r -- Identity
+    BeOp r -> normalizeInterval $ getRegisterInterval state r -- Identity
     NegOp r -> case itv of -- Negate the interval
                   Itv (NegInfinity, Finite n) -> Itv (Finite (-n), PosInfinity)
                   Itv (Finite n, PosInfinity) -> Itv (NegInfinity, Finite (-n))
@@ -577,80 +614,82 @@ updateRegisterValue r itv = map (\(reg, i) ->
 -- It uses the interval as index, i.e. updates each memory cell corresponding to
 -- every index in the interval with the value.
 updateMemory :: ItvMemory -> Itv -> Itv -> ItvMemory
-updateMemory mem _ (EmptyItv) = mem 
-updateMemory mem value (Itv (NegInfinity, PosInfinity)) = foldl (\m i -> Map.insert i value m) mem [0..512]
-updateMemory mem value (Itv (NegInfinity, (Finite y))) = 
-  if y < 0 
-    then mem 
-    else if y < 512
-      then foldl (\m i -> Map.insert i value m) mem [0..y] 
-      else foldl (\m i -> Map.insert i value m) mem [0..512] 
-updateMemory mem value (Itv ((Finite x), PosInfinity)) = 
-  if x < 0 
-    then  foldl (\m i -> Map.insert i value m) mem [0..512] 
-    else if x < 512
-      then foldl (\m i -> Map.insert i value m) mem [x..512] 
-      else mem
-updateMemory mem value (Itv ((Finite x), (Finite y))) =   
-  if x < 0 && y < 0
-    then mem 
-    else if x < 0 && y < 512
-      then foldl (\m i -> Map.insert i value m) mem [0..y] 
-      else if x < 0 && y > 512
-        then foldl (\m i -> Map.insert i value m) mem [0..512] 
-        else if x < 512 && y < 512
-          then foldl (\m i -> Map.insert i value m) mem [x..y] 
-          else if x < 512 && y > 512
-            then foldl (\m i -> Map.insert i value m) mem [x..512] 
-            else if x > 512 && y > 512
-              then mem
-              else updateMemory mem value (normalizeInterval (Itv ((Finite x), (Finite y))))
-updateMemory mem value x = updateMemory mem value (normalizeInterval x)
+updateMemory me a b = updateMemory' me (normalizeInterval a) (normalizeInterval b)
+  where 
+    updateMemory' :: ItvMemory -> Itv -> Itv -> ItvMemory
+    updateMemory' mem _ (EmptyItv) = mem 
+    updateMemory' mem value (Itv (NegInfinity, PosInfinity)) = foldl (\m i -> Map.insert i value m) mem [0..512]
+    updateMemory' mem value (Itv (NegInfinity, (Finite y))) = 
+      if y < 0 
+        then mem 
+        else if y < 512
+          then foldl (\m i -> Map.insert i value m) mem [0..y] 
+          else foldl (\m i -> Map.insert i value m) mem [0..512] 
+    updateMemory' mem value (Itv ((Finite x), PosInfinity)) = 
+      if x < 0 
+        then  foldl (\m i -> Map.insert i value m) mem [0..512] 
+        else if x < 512
+          then foldl (\m i -> Map.insert i value m) mem [x..512] 
+          else mem
+    updateMemory' mem value (Itv ((Finite x), (Finite y))) =   
+      if x < 0 && y < 0
+        then mem 
+        else if x < 0 && y < 512
+          then foldl (\m i -> Map.insert i value m) mem [0..y] 
+          else if x < 0 && y > 512
+            then foldl (\m i -> Map.insert i value m) mem [0..512] 
+            else if x < 512 && y < 512
+              then foldl (\m i -> Map.insert i value m) mem [x..y] 
+              else if x < 512 && y > 512
+                then foldl (\m i -> Map.insert i value m) mem [x..512] 
+                else mem
+    updateMemory' _ value x = error $ "It shouldnt reach here: " ++ (show value) ++ " " ++ (show x) -- Just to avoid non-exhaustive pattern
 
 -- Function that takes an interval with indexes and return the biggest possible interval from the
 -- values mapped by the indexes in memory.
 getMemoryInterval :: ItvMemory -> Itv -> Itv
-getMemoryInterval _ EmptyItv = EmptyItv
-getMemoryInterval mem (Itv (NegInfinity, PosInfinity)) = itv
+getMemoryInterval me a = getMemoryInterval' me (normalizeInterval a)
   where
-    intervals = mapMaybe (`Map.lookup` mem) [0..512]
-    itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
-getMemoryInterval mem (Itv (NegInfinity, (Finite y))) = itv
-  where
-    intervals =   
-      if y < 0 
-        then [EmptyItv]
-        else if y < 512
-          then mapMaybe (`Map.lookup` mem) [0..y] 
-          else mapMaybe (`Map.lookup` mem) [0..512] 
-    itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
-getMemoryInterval mem (Itv ((Finite x), PosInfinity)) = itv
-    where
-      intervals =   
-        if x < 0 
-          then mapMaybe (`Map.lookup` mem) [0..512] 
-          else if x < 512
-            then mapMaybe (`Map.lookup` mem) [x..512] 
-            else [EmptyItv]
-      itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
-getMemoryInterval mem (Itv ((Finite x), (Finite y))) = itv
-  where
-    intervals =
-      if x < 0 && y < 0
-        then [EmptyItv] 
-        else if x < 0 && y < 512
-          then mapMaybe (`Map.lookup` mem) [0..y] 
-          else if x < 0 && y > 512
-            then mapMaybe (`Map.lookup` mem) [0..512] 
-            else if x < 512 && y < 512
-              then mapMaybe (`Map.lookup` mem) [x..y] 
-              else if x < 512 && y > 512
+    getMemoryInterval' :: ItvMemory -> Itv -> Itv
+    getMemoryInterval' _ EmptyItv = EmptyItv
+    getMemoryInterval' mem (Itv (NegInfinity, PosInfinity)) = itv
+      where
+        intervals = mapMaybe (`Map.lookup` mem) [0..512]
+        itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
+    getMemoryInterval' mem (Itv (NegInfinity, (Finite y))) = itv
+      where
+        intervals =   
+          if y < 0 
+            then [EmptyItv]
+            else if y < 512
+              then mapMaybe (`Map.lookup` mem) [0..y] 
+              else mapMaybe (`Map.lookup` mem) [0..512] 
+        itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
+    getMemoryInterval' mem (Itv ((Finite x), PosInfinity)) = itv
+        where
+          intervals =   
+            if x < 0 
+              then mapMaybe (`Map.lookup` mem) [0..512] 
+              else if x < 512
                 then mapMaybe (`Map.lookup` mem) [x..512] 
-                else if x > 512 && y > 512
-                  then [EmptyItv]
-                  else [getMemoryInterval mem (normalizeInterval (Itv ((Finite x), (Finite y))))]
-    itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
-getMemoryInterval mem x = getMemoryInterval mem (normalizeInterval x)
+                else [EmptyItv]
+          itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
+    getMemoryInterval' mem (Itv ((Finite x), (Finite y))) = itv
+      where
+        intervals =
+          if x < 0 && y < 0
+            then [EmptyItv] 
+            else if x < 0 && y < 512
+              then mapMaybe (`Map.lookup` mem) [0..y] 
+              else if x < 0 && y > 512
+                then mapMaybe (`Map.lookup` mem) [0..512] 
+                else if x < 512 && y < 512
+                  then mapMaybe (`Map.lookup` mem) [x..y] 
+                  else if x < 512 && y > 512
+                    then mapMaybe (`Map.lookup` mem) [x..512] 
+                    else [EmptyItv]
+        itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
+    getMemoryInterval' _ x = error $ "It shouldnt reach here: " ++ (show x) -- Just to avoid non-exhaustive pattern
 
 -- Filter the lower bound and returns the smallest
 -- In the case it is an Empty interval I return the greatest possible 
