@@ -32,3 +32,5 @@ R: Same as the above
 Attacker model?
 R: A paragraph in the introduction is enough for now atleast
 --------------------------
+Changes in judgment, remove Stmt?
+R:
