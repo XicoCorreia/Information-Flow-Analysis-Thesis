@@ -7,14 +7,14 @@
     mul r2, 3           ; common code
     mov r0, 1
 
-    jeq r0, 7, +4       ;; while cond
+    jlt r0, 7, +4       ;; while cond
         add r3, r2       ;  body
         add r4, 1       ;  body
-        add r0, 1
+        mod r0, 1
     ja -5
 
     jne r3, 2, +3       ;; while cond
-        add r0, 2       ;  body
+        rsh r0, 2       ;  body
         add r3, 1
     ja -4
     exit

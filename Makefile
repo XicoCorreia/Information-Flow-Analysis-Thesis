@@ -27,6 +27,12 @@ run-synthetic-tests: build
 		dot -Tpdf examples/graphs/$$file.dot -o examples/graphs/$$file.pdf; \
 	done
 
+# Run the program for each example
+run-interval-analysis-tests: build
+	@for file in $(TESTS); do \
+		$(CABAL_CMD) examples/$$file.asm; \
+	done
+
 # Run one examples of a program
 run-one-synthetic-test: build
 	$(CABAL_CMD) examples/$(TEST_NAME).asm examples/graphs/$(TEST_NAME).dot $(SECRET_RS); \

@@ -1,8 +1,8 @@
-    mov r0, 0
-    jne r2, 2, +7           ;; while cond 1
-    add r0, 1               ;  body 1
+    mov r2, 0
+    jeq r2, 2, +7           ;; while cond 1
+    add r1, 1               ;  body 1
         jne r1, 2, +4       ;; while cond 2
-            add r3, 1       ;  body 2
+            and r3, 1       ;  body 2
             mov r4, 2
             mov r5, 5
         ja -5

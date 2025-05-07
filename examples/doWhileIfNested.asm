@@ -1,6 +1,6 @@
     mov r3, 6
-    mov r0, 0
-        add r0, 1           ;;  body
+    mov r0, 1
+        neg r0              ;;  body
         jeq r3, 6, +2       ; if
             add r1, 1       ; then
         ja +1   

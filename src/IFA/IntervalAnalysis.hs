@@ -11,7 +11,7 @@ import Ebpf.Asm
 
 -- Perform the union of two intervals.
 unionInterval :: Itv -> Itv -> Itv
-unionInterval a b = unionInterval' (normalizeInterval a) (normalizeInterval b)
+unionInterval a b = normalizeInterval $ unionInterval' (normalizeInterval a) (normalizeInterval b)
   where 
     unionInterval' :: Itv -> Itv -> Itv
     unionInterval' EmptyItv x = x
@@ -33,7 +33,7 @@ unionInterval a b = unionInterval' (normalizeInterval a) (normalizeInterval b)
 
 -- Perform the intersection of two intervals.
 intersectionInterval :: Itv -> Itv -> Itv
-intersectionInterval a b = intersectionInterval' (normalizeInterval a) (normalizeInterval b)
+intersectionInterval a b = normalizeInterval $ intersectionInterval' (normalizeInterval a) (normalizeInterval b)
   where
     intersectionInterval' EmptyItv _ = EmptyItv
     intersectionInterval' _ EmptyItv = EmptyItv
@@ -564,7 +564,7 @@ processCondition state e =
     -- Less than operation
     LessThan r ri ->  processCondition' ltInterval (R r) ri state
     -- Less or equal than operation
-    LessEqual r ri -> processCondition' ltInterval (R r) ri state
+    LessEqual r ri -> processCondition' leqInterval (R r) ri state
     -- Greater than is equivalent to less than with the operands inverted
     GreaterThan r ri -> processCondition' ltInterval ri (R r) state
     -- Greater or equal than is equivalent to less or equal than with the operands inverted
