@@ -6,7 +6,9 @@ TESTS = doWhile \
 		nestedIfLoop \
 		nestedWhiles \
 		seqWhiles \
-		doWhileIfNested 
+		doWhileIfNested \
+		loadFromImm \
+		loadFromReg
 TEST_NAME = doWhile
 SECRET_RS = r1
 
