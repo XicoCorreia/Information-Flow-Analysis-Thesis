@@ -9,7 +9,7 @@
 3. Should I start with Inference rules/Type system or Interval Analysis?
   R: Inference Rules - How an instruction evolve and change the state of security level (Explain each) 
 4. Go through Report and see where it should changed
-  R: Everything :)
+  R: Everything 
 --------------------------
 1. When loading a value to a register we can also decrease the security value like a mov op?
 R: Correct
@@ -35,4 +35,5 @@ R: A paragraph in the introduction is enough for now atleast
 Changes in judgment, remove Stmt?
 R: Yeah
 --------------------------
-
+Memory being updated for the whole program, normal or should I change it?
+R: 
