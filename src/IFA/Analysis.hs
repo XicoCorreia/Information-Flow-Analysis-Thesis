@@ -2,7 +2,7 @@ module IFA.Analysis (informationFlowAnalysis) where
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (find)
+import Data.List (find, foldl')
 
 import Data.Graph.Dom as Dom
 
@@ -13,45 +13,46 @@ import Ebpf.Asm
 
 -- Given a starting state with the security level for each register,
 -- perform the information flow analysis on a set of equations.
-informationFlowAnalysis :: Dom.Rooted -> Equations -> State -> SystemState
-informationFlowAnalysis graph eq initialState =
-  fixpointComputation graph (replicate ((length eq) + 1) initialState, Low, Set.empty) (Map.toList eq)
+informationFlowAnalysis :: Dom.Rooted -> Equations -> State -> [ItvState] -> SystemState
+informationFlowAnalysis graph eq initialState itvStates =
+  fixpointComputation graph itvStates (replicate ((length eq) + 1) initialState, Map.fromList [(i, Low) | i <- [0..511]] , Set.empty) (Map.toList eq) 
 
 -- Perform fixpoint computation for the analysis.
-fixpointComputation :: Dom.Rooted -> SystemState -> [(Label, [(Label, Stmt)])] -> SystemState 
-fixpointComputation graph ss eq = 
-  if ss == ss' then ss' else fixpointComputation graph ss' eq
+fixpointComputation :: Dom.Rooted -> [ItvState] -> SystemState -> [(Label, [(Label, Stmt)])] -> SystemState 
+fixpointComputation graph itvStates ss eq = 
+  if ss == ss' then ss' else fixpointComputation graph itvStates ss' eq
   where 
-    ss' = foldl (updateSystemState graph) ss eq
+    ss' = foldl (updateSystemState graph itvStates) ss eq
 
 -- This function updates the System state with the updated state for the node being processed.
-updateSystemState :: Dom.Rooted -> SystemState -> (Label, [(Label, Stmt)]) -> SystemState
-updateSystemState graph (states, mem, highContext) (nodeIdx, eqs) = 
+updateSystemState :: Dom.Rooted -> [ItvState] -> SystemState -> (Label, [(Label, Stmt)]) -> SystemState
+updateSystemState graph itvStates (states, mem, highContext) (nodeIdx, eqs) = 
   (before ++ [state'] ++ after, mem', highContext')
   where
-    (state', mem', highContext') = processElement graph Nothing (states, mem, highContext) (nodeIdx, eqs)
+    (state', mem', highContext') = processElement graph itvStates Nothing (states, mem, highContext) (nodeIdx, eqs)
     before = take nodeIdx states 
     after = drop (nodeIdx + 1) states
     
 -- Process the equations for a specific node, returning the updated SystemState.     
-processElement :: Dom.Rooted -> Maybe State -> SystemState -> (Label, [(Label, Stmt)]) -> (State, Memory, HighSecurityContext)
-processElement _ (Nothing) (states, mem, highContext) (nodeIdx,[]) = ((states !! nodeIdx), mem, highContext)
-processElement _ (Just state) (_, mem, highContext) (_,[]) = (state, mem, highContext)
-processElement graph unionState (states, mem, highContext) (currentNode, ((prevNode, stmt):es)) =     
+processElement :: Dom.Rooted -> [ItvState] -> Maybe State -> SystemState -> (Label, [(Label, Stmt)]) -> (State, Memory, HighSecurityContext)
+processElement _ _ (Nothing) (states, mem, highContext) (nodeIdx,[]) = ((states !! nodeIdx), mem, highContext)
+processElement _ _ (Just state) (_, mem, highContext) (_,[]) = (state, mem, highContext)
+processElement graph itvState unionState (states, mem, highContext) (currentNode, ((prevNode, stmt):es)) =     
   case unionState of
-      Nothing -> processElement graph (Just state) (states,  mem', highContext') (currentNode, es)
-      Just uState -> processElement graph (Just (unionStt uState state)) (states,  mem', highContext') (currentNode, es)
+      Nothing -> processElement graph itvState (Just state) (states,  mem', highContext') (currentNode, es)
+      Just uState -> processElement graph itvState (Just (unionStt uState state)) (states,  mem', highContext') (currentNode, es)
   where 
     inHighContext = isInHighContext prevNode (Set.toList highContext)
     prevState = (states !! prevNode)
-    (state,  mem', highContext') = updateUsingStmt graph prevState mem highContext inHighContext (prevNode, currentNode) stmt 
+    itv = (itvState !! prevNode)
+    (state,  mem', highContext') = updateUsingStmt graph itv prevState mem highContext inHighContext (prevNode, currentNode) stmt 
 
 -- Update a node's state by analysing the security level of an equation, it also updates the context if the equation 
 -- is a conditional jump, i.e. if cond, and in case it is a memory handling operation updates the memory.
-updateUsingStmt :: Dom.Rooted -> State -> Memory -> HighSecurityContext -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityContext)
+updateUsingStmt :: Dom.Rooted -> ItvState -> State -> Memory -> HighSecurityContext -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityContext)
 
 -- Process Binary operations
-updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r (Bin e)) = 
+updateUsingStmt _ _ state mem highContext inHighContext _ (AssignReg r (Bin e)) = 
   case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (updatedState, mem, highContext)
@@ -60,7 +61,7 @@ updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r (Bin e)) =
     updatedState = updateRegisterSecurity r secLevel state
 
 -- Process Unary operations
-updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r (Un e)) = 
+updateUsingStmt _ _ state mem highContext inHighContext _ (AssignReg r (Un e)) = 
     case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (updatedState, mem, highContext)
@@ -69,7 +70,7 @@ updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r (Un e)) =
     updatedState = updateRegisterSecurity r secLevel state
 
 -- Process Mov operation
-updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r (Mv ri)) = 
+updateUsingStmt _ _ state mem highContext inHighContext _ (AssignReg r (Mv ri)) = 
   case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (updatedState, mem, highContext)
@@ -78,17 +79,17 @@ updateUsingStmt _ state mem highContext inHighContext _ (AssignReg r (Mv ri)) =
     updatedState = updateRegisterSecurity r secLevel state
 
 -- Process Store operations
-updateUsingStmt _ state mem highContext inHighContext _ (StoreInMem r _ ri) = 
+updateUsingStmt _ itvState state mem highContext inHighContext _ (StoreInMem r off ri) = 
   case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (state, mem', highContext)
   where
     secLevelIdx = if inHighContext then High else getRegisterSecurityLevel state r
     secLevel = if secLevelIdx == High then High else getRegisterImmSecurityLevel state ri
-    mem' = if secLevel == High then High else mem
+    mem' = updateMemorySecurity mem itvState r off secLevel 
 
 -- Process Load operation with register as index
-updateUsingStmt _ state mem highContext inHighContext _ (LoadFromMemReg r r' _) =
+updateUsingStmt _ itvState state mem highContext inHighContext _ (LoadFromMemReg r r' off) =
     case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> case lookup r' state of 
@@ -96,20 +97,20 @@ updateUsingStmt _ state mem highContext inHighContext _ (LoadFromMemReg r r' _) 
             _ -> (updatedState, mem, highContext)
   where
     secLevelIdx = if inHighContext then High else getRegisterSecurityLevel state r'
-    secLevel = if secLevelIdx == High then High else mem
+    secLevel = if secLevelIdx == High then High else getMemorySecurityLevel mem itvState (R r') off
     updatedState = updateRegisterSecurity r secLevel state
 
 -- Process Load operation with Imm as index
-updateUsingStmt _ state mem highContext inHighContext _ (LoadFromMemImm r _) = 
+updateUsingStmt _ itvState state mem highContext inHighContext _ (LoadFromMemImm r i) = 
   case lookup r state of 
     Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
     _ -> (updatedState, mem, highContext)
   where
-    secLevel = if inHighContext then High else mem
+    secLevel = if inHighContext then High else getMemorySecurityLevel mem itvState (Imm i) Nothing 
     updatedState = updateRegisterSecurity r secLevel state
 
 -- Process conditional jumps
-updateUsingStmt graph state mem highContext inHighContext (prevNode, _) (If cond _) =  
+updateUsingStmt graph  _ state mem highContext inHighContext (prevNode, _) (If cond _) =  
   if secLevel == High
     then 
       case find (\(n,_) -> n == prevNode) (ipdom graph) of
@@ -121,10 +122,10 @@ updateUsingStmt graph state mem highContext inHighContext (prevNode, _) (If cond
     secLevel = if inHighContext then High else processCondition state cond
 
 -- Process Unconditional jump
-updateUsingStmt _ state mem highContext _ _ (Goto _) = (state, mem, highContext) 
+updateUsingStmt _ _ state mem highContext _ _ (Goto _) = (state, mem, highContext) 
 
 -- Process Call operation
-updateUsingStmt _ state mem highContext _ _ (CallOp _) = (state, mem, highContext)   
+updateUsingStmt _ _ state mem highContext _ _ (CallOp _) = (state, mem, highContext)   
 
 ------------------- Functions related to processing different Stmt ------------------------
 
@@ -191,7 +192,63 @@ updateRegisterSecurity r secLevel = map (\(reg, sec) ->
     if reg == r 
         then (reg, secLevel)
         else (reg, sec))
+
+-- Given a register as index the function gets the possible values for the index from the interval
+-- state and for each of the possible index update the memory cell with the security level
+updateMemorySecurity :: Memory -> ItvState -> Reg -> Maybe MemoryOffset -> SecurityLevel -> Memory
+updateMemorySecurity mem itvState r off seclvl = 
+  case lookup r itvState of
+    Just itv -> foldl' (\m idx -> Map.insert idx seclvl m) mem indices
+      where 
+        offset = case off of
+          Nothing -> 0
+          Just o -> o
+        indices = fixInterval itv (fromIntegral offset)
+    Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
+
+-- In case the RegImm is an immediate it returns the security level of that memory cell,
+-- if the index is a register, it becomes an interval, so the security level returned is
+-- the LUB for all the possible indices
+getMemorySecurityLevel :: Memory -> ItvState -> RegImm -> Maybe MemoryOffset -> SecurityLevel
+getMemorySecurityLevel mem _ (Imm i) _ = 
+  case Map.lookup (fromIntegral  i) mem of
+    Just s -> s
+    Nothing -> error "Unaccessable memory"
+getMemorySecurityLevel mem itvState (R r) off = 
+  case lookup r itvState of
+    Just itv -> if isHigh then High else Low
+      where 
+        offset = case off of
+          Nothing -> 0
+          Just o -> o
+        indices = fixInterval itv (fromIntegral offset)
+        isHigh = any (\i -> Map.lookup i mem == Just High) indices
+    Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
   
+-- Takes the interval of possible indexes and returns a list of ints with the
+-- possible indexes, taking into account that the memory has 512 cells
+fixInterval :: Itv -> Int -> [Int]
+fixInterval (Itv (NegInfinity, PosInfinity)) _ = [0..511]
+fixInterval (Itv (NegInfinity, Finite x)) off = [0..maxV]
+  where
+    x' = x + off
+    maxV = if x' >= 511 then 511 else 
+          if x' >= 0 then x' else error "Memory index is not valid" 
+fixInterval (Itv (Finite x, PosInfinity)) off = [minV..511]
+  where
+    x' = x + off
+    minV = if x' <= 0 then 0 else 
+          if x' <= 511 then x' else error "Memory index is not valid" 
+fixInterval (Itv (Finite x, Finite y)) off = [minV..maxV]
+  where
+    x' = x + off
+    minV = if x' <= 0 then 0 else 
+          if x' <= 511 then x' else error "Memory index is not valid" 
+    y' = y + off
+    maxV = if y' >= 511 then 511 else 
+          if y' >= 0 then x' else error "Memory index is not valid" 
+fixInterval _ _ = error "Interval needs to be normalized"
+
 -- Union of two states.
 unionStt :: State -> State -> State
 unionStt = zipWith combine
