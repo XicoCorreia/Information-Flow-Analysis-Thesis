@@ -52,7 +52,7 @@ initialState = [
 -- Initialize state with every register associated with an empty interval.
 initialStateItv :: ItvState
 initialStateItv = [
-    (Reg 0, EmptyItv), (Reg 1, EmptyItv), (Reg 2, EmptyItv), 
+    (Reg 0, EmptyItv), (Reg 1, Itv (Finite 0, Finite 5)), (Reg 2, EmptyItv), 
     (Reg 3, EmptyItv), (Reg 4, EmptyItv), (Reg 5, EmptyItv), 
     (Reg 6, EmptyItv), (Reg 7, EmptyItv), (Reg 8, EmptyItv), 
     (Reg 9, EmptyItv), (Reg 10, EmptyItv)]
@@ -62,31 +62,10 @@ main :: IO ()
 main = do
   args <- Sys.getArgs
   if length args < 2
-    then 
-      -- Run interval analysis
-      if length args == 1 
-        then do   
-          res <- parseFromFile (args !! 0)
-          case res of
-            -- Case where there is an error parsing the program
-            Left err -> do
-              putStrLn "Some sort of error occurred while parsing:"
-              print err
-            -- Create CFG, equations and run the interval analysis
-            Right prog -> 
-              let 
-                cfg' = cfg prog
-                equations = cfgToEquations cfg' (Map.empty)
-                (itv,_) = intervalAnalysis equations initialStateItv
-              in do
-                printf "\nFinal states:\n"  
-                mapM_  (\(index,lst) -> putStrLn (show index ++ ": " ++ show lst)) 
-                  (zip ([0..] :: [Int]) itv) 
-        else do
-          -- Case where there is not enough arguments    
-          putStrLn "Usage:"
-          putStrLn "- Run information flow analysis and visualize cfg:\n <EBPF_FILE> <DOT_FILE> [secret1 secret2]"
-          putStrLn "- Example: cabal run ebpf-cfg -- examples/doWhile.asm graphs/doWhile.dot r1 r2 r3"
+    then do
+      putStrLn "Usage:"
+      putStrLn "- Run information flow analysis and visualize cfg:\n <EBPF_FILE> <DOT_FILE> [secret1 secret2]"
+      putStrLn "- Example: cabal run ebpf-cfg -- examples/doWhile.asm graphs/doWhile.dot r1 r2 r3"
     else
       -- Get arguments
       let ebpfFile = args !! 0
@@ -114,9 +93,10 @@ main = do
               let 
                 cfg' = cfg prog
                 equations = cfgToEquations cfg' (Map.empty)
+                (itvStates, _) = intervalAnalysis equations initialStateItv
                 edgesList = [(from, to) | (from, _, to) <- Set.toList cfg']
                 graphDom = ((length equations), Dom.fromEdges edgesList) 
-                (states, memory, context) = informationFlowAnalysis graphDom equations updatedState
+                (states, memory, context) = informationFlowAnalysis graphDom equations updatedState itvStates
                 conditions = Set.toList $ Set.map fst context
                 dependencies = concatMap snd (Set.toList context)
                 edges = cfgToDot $ cfg prog
@@ -124,6 +104,8 @@ main = do
               -- Print analysis output  
               printf "\nEquations:\n"
               putStrLn $ formatMap equations
+              printf "\nItv Analysis:\n"
+              mapM_  (\(index,lst) -> putStrLn (show index ++ ": " ++ show lst)) (zip ([0..] :: [Int]) itvStates) 
               printf "\nFinal states:\n"  
               mapM_  (\(index,lst) -> putStrLn (show index ++ ": " ++ show lst)) 
                 (zip ([0..] :: [Int]) states) 

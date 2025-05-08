@@ -1,6 +1,6 @@
     mov r2, 0
     jeq r2, 2, +7           ;; while cond 1
-    add r1, 1               ;  body 1
+    mod r1, 1               ;  body 1
         jne r1, 2, +4       ;; while cond 2
             and r3, 1       ;  body 2
             mov r4, 2

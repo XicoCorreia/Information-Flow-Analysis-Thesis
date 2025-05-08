@@ -246,7 +246,7 @@ fixInterval (Itv (Finite x, Finite y)) off = [minV..maxV]
           if x' <= 511 then x' else error "Memory index is not valid" 
     y' = y + off
     maxV = if y' >= 511 then 511 else 
-          if y' >= 0 then x' else error "Memory index is not valid" 
+          if y' >= 0 then y' else error "Memory index is not valid" 
 fixInterval EmptyItv _ = []
 fixInterval _ _ = error "Interval needs to be normalized"
 

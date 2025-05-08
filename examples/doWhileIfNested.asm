@@ -2,7 +2,7 @@
     mov r0, 1
         neg r0              ;;  body
         jeq r3, 6, +2       ; if
-            add r1, 1       ; then
+            arsh r1, 1       ; then
         ja +1   
             mov r2, 1       ; else
     jne r1, 2, +-6          ; while cond
