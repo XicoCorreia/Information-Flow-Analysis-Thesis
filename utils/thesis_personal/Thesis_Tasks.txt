@@ -4,7 +4,6 @@ Programming tasks
 *DONE - Handling all possible eBPF instructions in analysis
 - PART 2
 ?IN_PROGRESS - Improve memory modeling by combining interval analysis with information flow analysis.
-TODO - Recognize when non-sensitive data is first being assigned to registers
 
 Testing tasks
 - PART 1
@@ -23,4 +22,4 @@ Mathematical and theoretical tasks
 - PART 2
 *DONE - Prove soundness/completeness/non interference
 - PART 3
-TODO - Typing system/Inference rules for extended system
+*DONE - Typing system/Inference rules for extended system
