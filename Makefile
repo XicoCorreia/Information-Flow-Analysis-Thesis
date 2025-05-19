@@ -9,7 +9,7 @@ TESTS = doWhile \
 		doWhileIfNested \
 		loadFromImm \
 		loadFromReg
-TEST_NAME = doWhile
+TEST_NAME = test
 SECRET_RS = r1
 
 EBPF_PROG = firstProg

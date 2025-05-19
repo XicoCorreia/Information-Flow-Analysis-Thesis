@@ -375,15 +375,21 @@ leqInterval itv1 itv2 = leqInterval' (normalizeInterval itv1) (normalizeInterval
 
 ------------------- Widening & Narrowing ------------------------
 
--- Performs widening operation in two intervals.
--- wideningInterval :: Itv -> Itv -> Itv
--- wideningInterval x EmptyItv = x
--- wideningInterval EmptyItv x = x
--- wideningInterval (Itv (x1,x2)) (Itv (y1, y2)) =
---   Itv (x3,y3) 
---   where
---   x3 = if y1 < x1 then NegInfinity else x1
---   y3 = if y2 > x2 then PosInfinity else x2
+--Performs widening operation in two intervals.
+wideningInterval :: Itv -> Itv -> Itv
+wideningInterval x EmptyItv = x
+wideningInterval EmptyItv x = x
+wideningInterval (Itv (x1,x2)) (Itv (y1, y2)) =
+  Itv (x3,y3) 
+  where
+  x3 = if y1 < x1 then NegInfinity else x1
+  y3 = if y2 > x2 then PosInfinity else x2
+
+-- Widening of two states.
+wideningState :: ItvState -> ItvState -> ItvState
+wideningState = zipWith combine
+  where
+    combine (reg, itv1) (_, itv2) = (reg, wideningInterval itv1 itv2)
 
 -- -- Performs narrowing operation in two intervals.
 -- narrowingInterval :: Itv -> Itv -> Itv
@@ -399,36 +405,39 @@ leqInterval itv1 itv2 = leqInterval' (normalizeInterval itv1) (normalizeInterval
 
 -- Perform the interval analysis on a set of equations.
 intervalAnalysis :: Equations -> ItvState -> ([ItvState], ItvMemory)
-intervalAnalysis eq initialStateItv = fixpointItvAnalysis eqList state memory
+intervalAnalysis eq initialStateItv = fixpointItvAnalysis eqList state memory 0
     where
         eqList = Map.toList eq 
         state = replicate (length eqList) initialStateItv
         memory = Map.empty
 
 -- Perform fixpoint computation for the analysis.
-fixpointItvAnalysis :: [(Label, [(Label, Stmt)])] -> [ItvState] -> ItvMemory -> ([ItvState], ItvMemory)
-fixpointItvAnalysis eq state mem =
-    if state == newState && mem == newMem then (newState, newMem) else fixpointItvAnalysis eq newState newMem
+fixpointItvAnalysis :: [(Label, [(Label, Stmt)])] -> [ItvState] -> ItvMemory -> Int -> ([ItvState], ItvMemory)
+fixpointItvAnalysis eq state mem i =
+    if state == newState && mem == newMem then (newState, newMem) else fixpointItvAnalysis eq newState newMem i'
         where 
-            (newState, newMem) = foldl updateItvState (state, mem) eq 
+            (newState, newMem) = foldl (updateItvState i) (state, mem) eq 
+            i' = i + 1
 
 -- This function updates the state of a program point after it is analyzed.
-updateItvState :: ([ItvState], ItvMemory) -> (Label, [(Label, Stmt)]) -> ([ItvState], ItvMemory)
-updateItvState (state, mem) (nodeIdx, eqs) = 
+updateItvState :: Int -> ([ItvState], ItvMemory) -> (Label, [(Label, Stmt)]) -> ([ItvState], ItvMemory)
+updateItvState i (state, mem) (nodeIdx, eqs) = 
   ((before ++ [state'] ++ after), newMem)
   where
-    (state', newMem) = processItvElement Nothing state mem (nodeIdx, eqs)
+    (state', newMem) = processItvElement i Nothing state mem (nodeIdx, eqs)
     before = take nodeIdx state 
     after = drop (nodeIdx + 1) state
 
 -- Process the equations for a specific node, returning the updated state.     
-processItvElement :: Maybe ItvState -> [ItvState] -> ItvMemory -> (Label, [(Label, Stmt)]) -> (ItvState, ItvMemory)
-processItvElement (Nothing) states mem (nodeIdx,[]) = (states !! nodeIdx, mem)
-processItvElement (Just state) _ mem (_,[]) = (state, mem)
-processItvElement unionState states mem (currentNode, ((prevNode, stmt):es)) = 
+processItvElement :: Int -> Maybe ItvState -> [ItvState] -> ItvMemory -> (Label, [(Label, Stmt)]) -> (ItvState, ItvMemory)
+processItvElement _ (Nothing) states mem (nodeIdx,[]) = (states !! nodeIdx, mem)
+processItvElement _ (Just state) _ mem (_,[]) = (state, mem)
+processItvElement i unionState states mem (currentNode, ((prevNode, stmt):es)) = 
     case unionState of
-      Nothing -> processItvElement (Just state') states newMem (currentNode, es)
-      Just uState -> processItvElement(Just (unionStt uState state')) states newMem (currentNode, es)
+      Nothing -> processItvElement i (Just state') states newMem (currentNode, es)
+      Just uState -> if i `mod` 5 == 0 
+        then processItvElement i (Just (wideningState uState state')) states newMem (currentNode, es)
+        else processItvElement i (Just (unionStt uState state')) states newMem (currentNode, es)
   where 
     prevState = (states !! prevNode)
     (state', newMem) = updateItvUsingStmt prevState mem stmt 

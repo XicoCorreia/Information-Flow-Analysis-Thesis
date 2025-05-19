@@ -35,5 +35,5 @@ R: A paragraph in the introduction is enough for now atleast
 Changes in judgment, remove Stmt?
 R: Yeah
 --------------------------
-Memory being updated for the whole program, normal or should I change it?
-R: 
+
+

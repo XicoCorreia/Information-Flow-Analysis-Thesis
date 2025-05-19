@@ -4,6 +4,7 @@ import IFA.Analysis
 import IFA.Equations
 import IFA.Types
 import IFA.Cfg
+import IFA.IntervalAnalysis
 
 import Ebpf.Asm
 import Ebpf.AsmParser
@@ -17,7 +18,7 @@ import Data.Graph.Dom as Dom
 tests :: TestTree
 tests = testGroup "eBPF Analysis HandWritten Tests" (map createTest examplePrograms)
 
-createTest :: (String, ([State], SecurityLevel)) -> TestTree
+createTest :: (String, ([State], Memory)) -> TestTree
 createTest (ebpfFile,(expStates, expMem)) = 
     testCase ("Testing " ++ ebpfFile) $ do
         res <- parseFromFile ("examples/" ++ ebpfFile)
@@ -32,7 +33,8 @@ createTest (ebpfFile,(expStates, expMem)) =
                     equations = cfgToEquations cfg' Map.empty
                     edgesList = [(from, to) | (from, _, to) <- Set.toList cfg']
                     graphDom = (length equations, Dom.fromEdges edgesList)
-                    (states, memory, _) = informationFlowAnalysis graphDom equations initialState
+                    (itv,_) = intervalAnalysis equations initialStateItv
+                    (states, memory, _) = informationFlowAnalysis graphDom equations initialState itv
 
 
 initialState :: State
@@ -42,7 +44,15 @@ initialState = [
     (Reg 6, Low), (Reg 7, Low), (Reg 8, Low), 
     (Reg 9, Low), (Reg 10, Low)]
 
-examplePrograms :: [(String, ([State], SecurityLevel))]
+initialStateItv :: ItvState
+initialStateItv = [
+    (Reg 0, EmptyItv), (Reg 1, Itv (Finite 0, Finite 5)), (Reg 2, EmptyItv), 
+    (Reg 3, EmptyItv), (Reg 4, EmptyItv), (Reg 5, EmptyItv), 
+    (Reg 6, EmptyItv), (Reg 7, EmptyItv), (Reg 8, EmptyItv), 
+    (Reg 9, EmptyItv), (Reg 10, EmptyItv)]
+
+
+examplePrograms :: [(String, ([State], Memory))]
 examplePrograms =
   [ ("doWhile.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
@@ -54,7 +64,7 @@ examplePrograms =
         , [(Reg 0,High),(Reg 1,High),(Reg 2,High),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,High),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Low))
+        ], Map.empty))
     ,
     ("whileLoop.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
@@ -68,7 +78,7 @@ examplePrograms =
         , [(Reg 0,High),(Reg 1,High),(Reg 2,High),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,High),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Low))
+        ], Map.empty))
         ,
     ("ifStatement.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
@@ -82,7 +92,7 @@ examplePrograms =
         , [(Reg 0,High),(Reg 1,High),(Reg 2,High),(Reg 3,High),(Reg 4,High),(Reg 5,High),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,High),(Reg 4,High),(Reg 5,High),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,High),(Reg 4,High),(Reg 5,High),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Low))
+        ], Map.empty))
         ,
     ("nestedIfLoop.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
@@ -97,7 +107,7 @@ examplePrograms =
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,High),(Reg 4,High),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,High),(Reg 4,High),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Low))
+        ], Map.empty))
         ,
     ("nestedWhiles.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
@@ -112,7 +122,7 @@ examplePrograms =
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,High),(Reg 4,High),(Reg 5,High),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,High),(Reg 4,High),(Reg 5,High),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,High),(Reg 5,High),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Low))
+        ], Map.empty))
         ,
     ("seqWhiles.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
@@ -133,7 +143,7 @@ examplePrograms =
         , [(Reg 0,High),(Reg 1,High),(Reg 2,High),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,High),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,High),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Low))
+        ], Map.empty))
         ,
     ("doWhileIfNested.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
@@ -153,5 +163,5 @@ examplePrograms =
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,High),(Reg 5,High),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,High),(Reg 5,High),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,High),(Reg 5,High),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Low))
+        ], Map.empty))
   ]
