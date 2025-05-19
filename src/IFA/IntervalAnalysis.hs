@@ -405,7 +405,7 @@ wideningState = zipWith combine
 
 -- Perform the interval analysis on a set of equations.
 intervalAnalysis :: Equations -> ItvState -> ([ItvState], ItvMemory)
-intervalAnalysis eq initialStateItv = fixpointItvAnalysis eqList state memory 0
+intervalAnalysis eq initialStateItv = fixpointItvAnalysis eqList state memory 1
     where
         eqList = Map.toList eq 
         state = replicate (length eqList) initialStateItv
@@ -435,7 +435,7 @@ processItvElement _ (Just state) _ mem (_,[]) = (state, mem)
 processItvElement i unionState states mem (currentNode, ((prevNode, stmt):es)) = 
     case unionState of
       Nothing -> processItvElement i (Just state') states newMem (currentNode, es)
-      Just uState -> if i `mod` 5 == 0 
+      Just uState -> if i `mod` 100 == 0 
         then processItvElement i (Just (wideningState uState state')) states newMem (currentNode, es)
         else processItvElement i (Just (unionStt uState state')) states newMem (currentNode, es)
   where 
