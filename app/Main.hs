@@ -93,7 +93,7 @@ main = do
               let 
                 cfg' = cfg prog
                 equations = cfgToEquations cfg' (Map.empty)
-                (itvStates, _) = intervalAnalysis equations initialStateItv
+                (itvStates, mem) = intervalAnalysis equations initialStateItv
                 edgesList = [(from, to) | (from, _, to) <- Set.toList cfg']
                 graphDom = ((length equations), Dom.fromEdges edgesList) 
                 (states, memory, context) = informationFlowAnalysis graphDom equations updatedState itvStates
@@ -103,7 +103,7 @@ main = do
               in do
               -- Print analysis output  
               printf "\nEquations:\n"
-              putStrLn $ formatMap equations
+              putStrLn $ show mem
               printf "\nItv Analysis:\n"
               mapM_  (\(index,lst) -> putStrLn (show index ++ ": " ++ show lst)) (zip ([0..] :: [Int]) itvStates) 
               printf "\nFinal states:\n"  

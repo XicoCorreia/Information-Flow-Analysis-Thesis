@@ -479,8 +479,8 @@ updateItvUsingStmt state mem (StoreInMem r offset ri) =
       Nothing -> error ("Register: " ++ show r ++ " is not allowed to be used")
       _ -> (state, mem')
   where
-    value = getRegisterInterval state r
-    index = getRegisterImmediateInterval state ri
+    index = getRegisterInterval state r
+    value = getRegisterImmediateInterval state ri
     indexOff = case offset of
       Just n -> addInterval index (constantInterval (fromIntegral n))
       Nothing -> index

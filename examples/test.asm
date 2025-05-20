@@ -1,5 +1,10 @@
-mov r1, 5
-jeq r1, 5 +2
-sub r1, 1
-ja -3
-mov r2, 1
+stxw [r1], r1
+mov r5, 2
+mov r0, 1
+lsh r0, 1000
+stxw [r5], r0
+ldxb r3 ,[r1]
+neg r0
+mov r5,3
+stxw [r5], r0
+lddw r3 , 3
