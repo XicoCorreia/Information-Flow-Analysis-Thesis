@@ -1,5 +1,5 @@
     mov r0, 0
-    add r1, 2
+    mov r1, 2
     jne r1, 2, +5       ;; while cond
         or r0, 1       ;  body
         add r1, 1

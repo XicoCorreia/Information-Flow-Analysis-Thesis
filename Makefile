@@ -8,7 +8,9 @@ TESTS = doWhile \
 		seqWhiles \
 		doWhileIfNested \
 		loadFromImm \
-		loadFromReg
+		loadFromReg \
+		whileLoopLow \
+
 TEST_NAME = test
 SECRET_RS = r1
 

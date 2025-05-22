@@ -11,11 +11,18 @@ import Ebpf.Asm
 
 ------------------- Functions that perform the analysis at each program point ------------------------
 
+defaultState :: State
+defaultState = [
+    (Reg 0, Low), (Reg 1, Low), (Reg 2, Low), 
+    (Reg 3, Low), (Reg 4, Low), (Reg 5, Low), 
+    (Reg 6, Low), (Reg 7, Low), (Reg 8, Low), 
+    (Reg 9, Low), (Reg 10, Low)]
+
 -- Given a starting state with the security level for each register,
 -- perform the information flow analysis on a set of equations.
 informationFlowAnalysis :: Dom.Rooted -> Equations -> State -> [ItvState] -> SystemState
 informationFlowAnalysis graph eq initialState itvStates =
-  fixpointComputation graph itvStates (replicate ((length eq) + 1) initialState, Map.fromList [(i, Low) | i <- [0..511]] , Set.empty) (Map.toList eq) 
+  fixpointComputation graph itvStates (initialState : replicate (length eq) defaultState, Map.fromList [(i, Low) | i <- [0..511]] , Set.empty) (Map.toList eq) 
 
 -- Perform fixpoint computation for the analysis.
 fixpointComputation :: Dom.Rooted -> [ItvState] -> SystemState -> [(Label, [(Label, Stmt)])] -> SystemState 
