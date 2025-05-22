@@ -1,4 +1,4 @@
-    mov r0, 0
+    mov r0, 1
         lsh r0, 1       ;  body
         mov r2, 2
         mov r3, 5
