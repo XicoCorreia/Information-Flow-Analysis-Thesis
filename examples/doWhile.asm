@@ -4,6 +4,6 @@
         mov r3, 5
         add r1, 1
     jlt r1, 2, +-5   ;; while cond
-    add r2, 3       ; common code
+    call 10202       ; common code
     mov r3, 1
     exit

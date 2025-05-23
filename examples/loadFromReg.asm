@@ -5,3 +5,4 @@ stxw [r2 +3], r2
 ldxh r3, [r1]
 stxw [r1], r2
 ldxb r4, [r3]
+exit

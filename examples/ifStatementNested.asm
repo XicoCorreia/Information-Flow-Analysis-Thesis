@@ -12,5 +12,5 @@
             ja +1
                 mov r4, 2   ; else 3
     mov r0, 1               ; common code
-    add r2, 3
+    call 12345
     exit
