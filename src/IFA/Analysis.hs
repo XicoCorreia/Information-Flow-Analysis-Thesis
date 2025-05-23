@@ -92,7 +92,8 @@ updateUsingStmt _ itvState state mem highContext inHighContext _ (StoreInMem r o
     _ -> (state, mem', highContext)
   where
     secLevelIdx = if inHighContext then High else getRegisterSecurityLevel state r
-    secLevel = if secLevelIdx == High then High else getRegisterImmSecurityLevel state ri
+    secLevel' = if secLevelIdx == High then High else getRegisterImmSecurityLevel state ri
+    secLevel = if secLevel' == High then High else getMemorySecurityLevel mem itvState (R r) off
     mem' = updateMemorySecurity mem itvState r off secLevel 
 
 -- Process Load operation with register as index

@@ -11,6 +11,7 @@ import Ebpf.AsmParser
 
 import Test.Tasty
 import Test.Tasty.HUnit
+import Control.Exception (try, SomeException, evaluate)
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Graph.Dom as Dom
@@ -25,16 +26,24 @@ createTest (ebpfFile,(expStates, expMem)) =
         case res of
             Left err -> 
                 assertFailure $ "Error parsing program: " ++ show err
-            Right prog -> do
-                states @?= expStates
-                memory @?= expMem
+            Right prog -> 
+                if null expStates
+                    then do
+                        result <- try (evaluate (informationFlowAnalysis graphDom equations initialState itv)) 
+                            :: IO (Either SomeException SystemState)
+                        case result of
+                            Left _  -> return () 
+                            Right _ -> assertFailure $ show result
+                    else do
+                        let (states, memory, _) = informationFlowAnalysis graphDom equations initialState itv
+                        states @?= expStates
+                        memory @?= expMem
                 where
                     cfg' = cfg prog
                     equations = cfgToEquations cfg' Map.empty
                     edgesList = [(from, to) | (from, _, to) <- Set.toList cfg']
                     graphDom = (length equations, Dom.fromEdges edgesList)
                     (itv,_) = intervalAnalysis equations initialStateItv
-                    (states, memory, _) = informationFlowAnalysis graphDom equations initialState itv
 
 
 initialState :: State
@@ -207,6 +216,7 @@ examplePrograms =
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3, High),(Reg 4,High),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
@@ -222,4 +232,18 @@ examplePrograms =
         , [(Reg 0,High),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         ], Map.fromList [if i >= 9 && i <=14 then (i, High) else (i, Low) | i <- [0..511]]))
+        ,
+        ("memoryError.asm", ([], Map.empty))
+        ,
+        ("largeMemoryIndex.asm", (
+        [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        ], Map.fromList [(i, High) | i <- [0..511]]))
   ]

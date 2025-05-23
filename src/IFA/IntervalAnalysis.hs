@@ -409,7 +409,7 @@ intervalAnalysis eq initialStateItv = fixpointItvAnalysis eqList state memory 1
     where
         eqList = Map.toList eq 
         state = replicate (length eqList) initialStateItv
-        memory = Map.empty
+        memory = Map.fromList [(i, EmptyItv) | i <- [0..511]]
 
 -- Perform fixpoint computation for the analysis.
 fixpointItvAnalysis :: [(Label, [(Label, Stmt)])] -> [ItvState] -> ItvMemory -> Int -> ([ItvState], ItvMemory)
