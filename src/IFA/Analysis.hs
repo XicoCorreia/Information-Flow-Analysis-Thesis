@@ -26,10 +26,11 @@ informationFlowAnalysis graph eq initialState itvStates =
 
 -- Perform fixpoint computation for the analysis.
 fixpointComputation :: Dom.Rooted -> [ItvState] -> SystemState -> [(Label, [(Label, Stmt)])] -> SystemState 
-fixpointComputation graph itvStates ss eq = 
-  if ss == ss' then ss' else fixpointComputation graph itvStates ss' eq
+fixpointComputation graph itvStates (s,m,c) eq = 
+  -- seq is used to force evaluation of the memory to catch errors
+  m' `seq` if s == s' then (s',m',c') else fixpointComputation graph itvStates (s',m,c') eq
   where 
-    ss' = foldl (updateSystemState graph itvStates) ss eq
+    (s',m',c') = foldl (updateSystemState graph itvStates) (s,m,c) eq
 
 -- This function updates the System state with the updated state for the node being processed.
 updateSystemState :: Dom.Rooted -> [ItvState] -> SystemState -> (Label, [(Label, Stmt)]) -> SystemState

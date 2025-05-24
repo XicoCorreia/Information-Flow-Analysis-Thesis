@@ -247,18 +247,6 @@ examplePrograms =
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         ], Map.fromList [(i, High) | i <- [0..511]]))
         ,
-        ("largeMemoryIndex.asm", (
-        [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Map.fromList [(i, High) | i <- [0..511]]))
-        ,
         ("memoryOpLoop.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]

@@ -2,39 +2,40 @@ CABAL_CMD = cabal run ebpf-cfg --
 
 TESTS = doWhile \
 		whileLoop \
+		whileLoopLow \
 		ifStatement \
 		nestedIfLoop \
 		nestedWhiles \
 		seqWhiles \
 		doWhileIfNested \
+		ifStatementNested \
 		loadFromImm \
 		loadFromReg \
-		whileLoopLow \
+		memoryOpLoop \
+		largeMemoryIndex \
 
-TEST_NAME = test
+TEST_NAME = example
 SECRET_RS = r1
 
 EBPF_PROG = firstProg
 EBPF_FUN = handle_tp
 
 # Default target
-all: run-synthetic-tests
+all: cabalTest
 
 # Build using cabal
 build:
 	cabal build
+
+# Test using cabal
+cabalTest: 
+	cabal test
 
 # Run the program for each example
 run-synthetic-tests: build
 	@for file in $(TESTS); do \
 		$(CABAL_CMD) examples/$$file.asm examples/graphs/$$file.dot $(SECRET_RS); \
 		dot -Tpdf examples/graphs/$$file.dot -o examples/graphs/$$file.pdf; \
-	done
-
-# Run the program for each example
-run-interval-analysis-tests: build
-	@for file in $(TESTS); do \
-		$(CABAL_CMD) examples/$$file.asm; \
 	done
 
 # Run one examples of a program

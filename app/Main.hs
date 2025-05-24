@@ -109,8 +109,8 @@ main = do
               printf "\nFinal states:\n"  
               mapM_  (\(index,lst) -> putStrLn (show index ++ ": " ++ show lst)) 
                 (zip ([0..] :: [Int]) states) 
-              printf "\nMemory: "
-              putStrLn $ show memory
+              printf "\nHigh Memory:\n"
+              putStrLn $ show ([ (i,s) | (i,s) <- Map.toList memory, s == High])
               -- Write dot File
               writeFile dotFile (dotPrelude ++
                         edges ++

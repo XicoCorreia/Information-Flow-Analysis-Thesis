@@ -1,0 +1,7 @@
+digraph cfg { 
+node [fontname="monospace"];
+node [shape=box];
+edge [fontname="monospace"];
+  0 -> 1 [label="mov64 r1, 1"];
+1 [style="rounded,filled",fillcolor=grey];
+}
