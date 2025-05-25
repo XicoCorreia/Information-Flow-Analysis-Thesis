@@ -14,8 +14,10 @@ SEC("tracepoint/syscalls/sys_enter_write")
 int ex(void *ctx)
 {
  pid_t pid = bpf_get_current_pid_tgid() >> 32;
- if (pid_filter && pid != pid_filter)
-  return 0;
- bpf_printk("BPF triggered sys_enter_write from PID %d.\n", pid);
- return 0;
+ if ((u32)pid % 10 == 0){
+    pid++;
+    return 10;
+ }
+ else 
+    return 0;
 }
