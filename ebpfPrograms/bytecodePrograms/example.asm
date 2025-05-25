@@ -1,4 +1,4 @@
-call 252704
+call 254624
 mov64 r1, 667236
 stxw [r10 +-8], r1
 lddw r1, 2675213260325678447
@@ -16,7 +16,7 @@ mov64 r1, r10
 add64 r1, -48
 mov64 r2, 44
 mov64 r3, r0
-call -112592
+call -112608
 mov64 r0, 0
 exit
 

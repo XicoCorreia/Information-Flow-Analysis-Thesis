@@ -17,8 +17,8 @@ TESTS = doWhile \
 TEST_NAME = example
 SECRET_RS = r1
 
-EBPF_PROG = firstProg
-EBPF_FUN = handle_tp
+EBPF_PROG = example
+EBPF_FUN = ex
 
 # Default target
 all: cabalTest
@@ -38,10 +38,15 @@ run-synthetic-tests: build
 		dot -Tpdf examples/graphs/$$file.dot -o examples/graphs/$$file.pdf; \
 	done
 
-# Run one examples of a program
+# Run one synthetic program
 run-one-synthetic-test: build
 	$(CABAL_CMD) examples/$(TEST_NAME).asm examples/graphs/$(TEST_NAME).dot $(SECRET_RS); \
 	dot -Tpdf examples/graphs/$(TEST_NAME).dot -o examples/graphs/$(TEST_NAME).pdf; \
+
+# Run one ebpf program
+run-one-ebpf-test: build
+	$(CABAL_CMD) ebpfPrograms/bytecodePrograms/$(EBPF_PROG).asm ebpfPrograms/graphs/$(EBPF_PROG).dot $(SECRET_RS); \
+	dot -Tpdf ebpfPrograms/graphs/$(EBPF_PROG).dot -o ebpfPrograms/graphs/$(EBPF_PROG).pdf; \
 
 # Load and attach an ebpf file
 load-and-attach-ebpf-program:
@@ -61,34 +66,31 @@ run-ebpf-decoder:
 ### Delete ebpf program if already loaded
 	sudo rm -rf /sys/fs/bpf/$(EBPF_PROG)
 ### Compile ebpf file
-	clang -O2 -target bpf -c ebpfPrograms/$(EBPF_PROG).c -o ebpfPrograms/$(EBPF_PROG).o
+	clang -O2 -target bpf -c ebpfPrograms/basePrograms/$(EBPF_PROG).c -o ebpfPrograms/basePrograms/$(EBPF_PROG).o
 ### Load ebpf file without attach
-	sudo bpftool prog load ebpfPrograms/$(EBPF_PROG).o /sys/fs/bpf/$(EBPF_PROG)
+	sudo bpftool prog load ebpfPrograms/basePrograms/$(EBPF_PROG).o /sys/fs/bpf/$(EBPF_PROG)
 ### Get opcodes + hex
-	sudo bpftool prog dump xlated name $(EBPF_FUN) opcodes > ebpfPrograms/opcodes.txt
+	sudo bpftool prog dump xlated name $(EBPF_FUN) opcodes > ebpfPrograms/$(EBPF_PROG)\_opcodes.txt
 ### Remove opcodes leaving only hex
-	awk 'NR % 2 == 0' ebpfPrograms/opcodes.txt > ebpfPrograms/opcodesFiltered.txt
+	awk 'NR % 2 == 0' ebpfPrograms/$(EBPF_PROG)\_opcodes.txt > ebpfPrograms/opcodesFiltered.txt
 ### Turn hex into binary to be decoded
 	xxd -p -r ebpfPrograms/opcodesFiltered.txt > ebpfPrograms/$(EBPF_PROG)\_opcodes.bin
 ### Call ebpf-tools decoder
-	cabal exec -- ebpf-tools -d ebpfPrograms/$(EBPF_PROG)\_opcodes.bin > ebpfPrograms/$(EBPF_PROG).asm
+	cabal exec -- ebpf-tools -d ebpfPrograms/$(EBPF_PROG)\_opcodes.bin > ebpfPrograms/bytecodePrograms/$(EBPF_PROG).asm
 ### Cleanup extra files
 	rm ebpfPrograms/opcodesFiltered.txt
+	rm -r ebpfPrograms/*.bin
+	rm -r ebpfPrograms/basePrograms/*.o
+
 
 # Remove a loaded ebpf program from the bpf environment
 remove-loaded-ebpf-program:
-	# Delete ebpf program if already loaded
 	sudo rm -rf /sys/fs/bpf/$(EBPF_PROG)
-
-# Clean up build artifacts in ebpfPrograms
-clean-ebpfPrograms:
-	rm -r ebpfPrograms/*.bin
-	rm -r ebpfPrograms/*.o
-	rm -r ebpfPrograms/*.txt
 
 # Clean up generated graphs
 clean-graphs:
 	rm -r examples/graphs/*
+	rm -r ebpfPrograms/graphs/*
 
 # Clean up build artifacts
 clean:
