@@ -55,7 +55,7 @@ initialStateItv = [
     (Reg 0, EmptyItv), (Reg 1, Itv (Finite 0, Finite 5)), (Reg 2, EmptyItv), 
     (Reg 3, EmptyItv), (Reg 4, EmptyItv), (Reg 5, EmptyItv), 
     (Reg 6, EmptyItv), (Reg 7, EmptyItv), (Reg 8, EmptyItv), 
-    (Reg 9, EmptyItv), (Reg 10, EmptyItv)]
+    (Reg 9, EmptyItv), (Reg 10, Itv (Finite 0, Finite 100))]
 
 ------------------- Perform analysis and generate dotfile with cfg ------------------------
 main :: IO ()
@@ -111,6 +111,8 @@ main = do
                 (zip ([0..] :: [Int]) states) 
               printf "\nHigh Memory:\n"
               putStrLn $ show ([ (i,s) | (i,s) <- Map.toList memory, s == High])
+              printf "\nHigh Context:\n"
+              putStrLn $ show context
               -- Write dot File
               writeFile dotFile (dotPrelude ++
                         edges ++

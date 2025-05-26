@@ -53,9 +53,9 @@ load-and-attach-ebpf-program:
 ### Delete ebpf program if already loaded
 	sudo rm -rf /sys/fs/bpf/$(EBPF_PROG)
 ### Compile ebpf file
-	clang -O2 -target bpf -c ebpfPrograms/$(EBPF_PROG).c -o ebpfPrograms/$(EBPF_PROG).o
+	clang -O2 -target bpf -c ebpfPrograms/basePrograms/$(EBPF_PROG).c -o ebpfPrograms/basePrograms/$(EBPF_PROG).o
 ### Load ebpf file without attach
-	sudo bpftool prog load ebpfPrograms/$(EBPF_PROG).o /sys/fs/bpf/$(EBPF_PROG) autoattach
+	sudo bpftool prog load ebpfPrograms/basePrograms/$(EBPF_PROG).o /sys/fs/bpf/$(EBPF_PROG) autoattach
 ### Check if it is correctly loaded
 	sudo bpftool prog show name $(EBPF_FUN)
 ### Verify if it is printing
