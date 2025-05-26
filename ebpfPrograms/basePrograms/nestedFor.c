@@ -10,7 +10,7 @@ typedef int pid_t;
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
 SEC("tracepoint/syscalls/sys_enter_write")
-int ex(void *ctx)
+int nestedLoops(void *ctx)
 {
     u32 pid = bpf_get_current_pid_tgid() >> 32;
     u32 acc = 1;
@@ -27,7 +27,7 @@ int ex(void *ctx)
     }
 
     if (acc > 100) {
-        return acc % 100;
+        return acc % 100 + 1;
     }
     else 
         return acc;

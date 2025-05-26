@@ -11,12 +11,14 @@ const pid_t pid_filter = 0;
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
 SEC("tracepoint/syscalls/sys_enter_write")
-int ifcase(void *ctx)
+int ite(void *ctx)
 {
- pid_t pid = bpf_get_current_pid_tgid() >> 32;
- if (pid == 100){
-    return 10;
- }
- else 
-    return 0;
+    u32 pid = bpf_get_current_pid_tgid() >> 32;
+
+    if (pid < 1000)
+        return 1;
+    else if (pid < 100000)
+        return 2;
+
+    return 3;
 }

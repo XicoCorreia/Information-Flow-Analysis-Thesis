@@ -47,7 +47,7 @@ initialState = [
     (Reg 0, Low), (Reg 1, Low), (Reg 2, Low), 
     (Reg 3, Low), (Reg 4, Low), (Reg 5, Low), 
     (Reg 6, Low), (Reg 7, Low), (Reg 8, Low), 
-    (Reg 9, Low), (Reg 10, Low)]
+    (Reg 9, Low), (Reg 10, High)]
 
 -- Initialize state with every register associated with an empty interval.
 initialStateItv :: ItvState
@@ -55,7 +55,7 @@ initialStateItv = [
     (Reg 0, EmptyItv), (Reg 1, Itv (Finite 0, Finite 5)), (Reg 2, EmptyItv), 
     (Reg 3, EmptyItv), (Reg 4, EmptyItv), (Reg 5, EmptyItv), 
     (Reg 6, EmptyItv), (Reg 7, EmptyItv), (Reg 8, EmptyItv), 
-    (Reg 9, EmptyItv), (Reg 10, Itv (Finite 0, Finite 100))]
+    (Reg 9, EmptyItv), (Reg 10, Itv (Finite 4, Finite 8))]
 
 ------------------- Perform analysis and generate dotfile with cfg ------------------------
 main :: IO ()
