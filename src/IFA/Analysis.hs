@@ -238,24 +238,9 @@ getMemorySecurityLevel mem itvState (R r) off =
 -- possible indexes, taking into account that the memory has 512 cells
 fixInterval :: Itv -> Int -> [Int]
 fixInterval (Itv (NegInfinity, PosInfinity)) _ = [0..511]
-fixInterval (Itv (NegInfinity, Finite x)) off = [0..maxV]
-  where
-    x' = x + off
-    maxV = if x' >= 511 then 511 else 
-          if x' >= 0 then x' else error "Memory index is not valid" 
-fixInterval (Itv (Finite x, PosInfinity)) off = [minV..511]
-  where
-    x' = x + off
-    minV = if x' <= 0 then 0 else 
-          if x' <= 511 then x' else error "Memory index is not valid" 
-fixInterval (Itv (Finite x, Finite y)) off = [minV..maxV]
-  where
-    x' = x + off
-    minV = if x' <= 0 then 0 else 
-          if x' <= 511 then x' else error "Memory index is not valid" 
-    y' = y + off
-    maxV = if y' >= 511 then 511 else 
-          if y' >= 0 then y' else error "Memory index is not valid" 
+fixInterval (Itv (NegInfinity, Finite x)) off = [0..x+off]
+fixInterval (Itv (Finite x, PosInfinity)) off = [x+off..511]
+fixInterval (Itv (Finite x, Finite y)) off = [x+off..y+off]
 fixInterval EmptyItv _ = []
 fixInterval _ _ = error "Interval needs to be normalized"
 

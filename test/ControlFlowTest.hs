@@ -27,7 +27,7 @@ createTest (ebpfFile,(expStates, expMem)) =
             Left err -> 
                 assertFailure $ "Error parsing program: " ++ show err
             Right prog -> 
-                if ebpfFile == "memoryError.asm"
+                if ebpfFile == "invalidReg.asm"
                     then do
                         result <- try (evaluate (informationFlowAnalysis graphDom equations initialState itv)) 
                             :: IO (Either SomeException SystemState)
@@ -233,7 +233,15 @@ examplePrograms =
         , [(Reg 0,High),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         ], Map.fromList((1,Low) : [(i, High) | i <- [9..14]])))
         ,
-        ("memoryError.asm", ([], Map.empty))
+        ("invalidReg.asm", ([], Map.empty))
+        ,
+        ("bigNegMemoryStore.asm", (
+        [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
+        ], Map.fromList [(i, High) | i <- [-2000..(-1400)]]))
         ,
         ("largeMemoryIndex.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
@@ -245,7 +253,7 @@ examplePrograms =
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,High),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Map.fromList [(i, High) | i <- [0..511]]))
+        ], Map.fromList [(i, High) | i <- [-20..580]]))
         ,
         ("memoryOpLoop.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
