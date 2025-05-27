@@ -22,7 +22,7 @@ defaultState = [
 -- perform the information flow analysis on a set of equations.
 informationFlowAnalysis :: Dom.Rooted -> Equations -> State -> [ItvState] -> SystemState
 informationFlowAnalysis graph eq initialState itvStates =
-  fixpointComputation graph itvStates (initialState : replicate (length eq) defaultState, Map.fromList [(i, Low) | i <- [0..511]] , Set.empty) (Map.toList eq) 
+  fixpointComputation graph itvStates (initialState : replicate (length eq) defaultState, Map.fromList [] , Set.empty) (Map.toList eq) 
 
 -- Perform fixpoint computation for the analysis.
 fixpointComputation :: Dom.Rooted -> [ItvState] -> SystemState -> [(Label, [(Label, Stmt)])] -> SystemState 
@@ -222,7 +222,7 @@ getMemorySecurityLevel :: Memory -> ItvState -> RegImm -> Maybe MemoryOffset -> 
 getMemorySecurityLevel mem _ (Imm i) _ = 
   case Map.lookup (fromIntegral  i) mem of
     Just s -> s
-    Nothing -> error "Unaccessable memory"
+    Nothing -> Low -- ! This could depend on input values 
 getMemorySecurityLevel mem itvState (R r) off = 
   case lookup r itvState of
     Just itv -> if isHigh then High else Low

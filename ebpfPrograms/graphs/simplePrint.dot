@@ -1,0 +1,26 @@
+digraph cfg { 
+node [fontname="monospace"];
+node [shape=box];
+edge [fontname="monospace"];
+  0 -> 1 [label="call 254624"];
+  1 -> 2 [label="mov64 r1, 667236"];
+  2 -> 3 [label="stxw [r10 +-8], r1"];
+  3 -> 4 [label="lddw r1, 2675213260325678447"];
+  4 -> 5 [label="stxdw [r10 +-16], r1"];
+  5 -> 6 [label="lddw r1, 8243311788065124983"];
+  6 -> 7 [label="stxdw [r10 +-24], r1"];
+  7 -> 8 [label="lddw r1, 6877671131690917747"];
+  8 -> 9 [label="stxdw [r10 +-32], r1"];
+  9 -> 10 [label="lddw r1, 8751374116481820007"];
+  10 -> 11 [label="stxdw [r10 +-40], r1"];
+  11 -> 12 [label="lddw r1, 7451612901544448066"];
+  12 -> 13 [label="stxdw [r10 +-48], r1"];
+  13 -> 14 [label="rsh64 r0, 32"];
+  14 -> 15 [label="mov64 r1, r10"];
+  15 -> 16 [label="add64 r1, -48"];
+  16 -> 17 [label="mov64 r2, 44"];
+  17 -> 18 [label="mov64 r3, r0"];
+  18 -> 19 [label="call -112608"];
+  19 -> 20 [label="mov64 r0, 0"];
+20 [style="rounded,filled",fillcolor=grey];
+}

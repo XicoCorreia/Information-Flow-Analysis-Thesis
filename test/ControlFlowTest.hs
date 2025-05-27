@@ -27,7 +27,7 @@ createTest (ebpfFile,(expStates, expMem)) =
             Left err -> 
                 assertFailure $ "Error parsing program: " ++ show err
             Right prog -> 
-                if null expStates
+                if ebpfFile == "memoryError.asm"
                     then do
                         result <- try (evaluate (informationFlowAnalysis graphDom equations initialState itv)) 
                             :: IO (Either SomeException SystemState)
@@ -61,7 +61,7 @@ initialStateItv = [
     (Reg 9, EmptyItv), (Reg 10, EmptyItv)]
 
 memoryInitial :: Memory
-memoryInitial = Map.fromList [(i, Low) | i <- [0..511]]
+memoryInitial = Map.empty
 
 
 examplePrograms :: [(String, ([State], Memory))]
@@ -220,7 +220,7 @@ examplePrograms =
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,High),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3, High),(Reg 4,High),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Map.fromList [if i <= 5 then (i, High) else (i, Low) | i <- [0..511]]))
+        ], Map.fromList [(i, High) | i <- [0..5]]))
         ,
         ("loadFromImm.asm", (
         [ [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
@@ -231,7 +231,7 @@ examplePrograms =
         , [(Reg 0,Low),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Map.fromList [if i >= 9 && i <=14 then (i, High) else (i, Low) | i <- [0..511]]))
+        ], Map.fromList((1,Low) : [(i, High) | i <- [9..14]])))
         ,
         ("memoryError.asm", ([], Map.empty))
         ,
@@ -259,5 +259,5 @@ examplePrograms =
         , [(Reg 0,High),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
         , [(Reg 0,High),(Reg 1,High),(Reg 2,Low),(Reg 3,Low),(Reg 4,Low),(Reg 5,Low),(Reg 6,Low),(Reg 7,Low),(Reg 8,Low),(Reg 9,Low),(Reg 10,Low)]
-        ], Map.fromList [if i >= 10 && i <=13 then (i, High) else (i, Low) | i <- [0..511]]))
+        ], Map.fromList [(i, High) | i <- [10..13]]))
   ]
