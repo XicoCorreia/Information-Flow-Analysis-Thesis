@@ -1,0 +1,31 @@
+digraph cfg { 
+node [fontname="monospace"];
+node [shape=box];
+edge [fontname="monospace"];
+  0 -> 1 [label="call 254624"];
+  1 -> 2 [label="mov64 r1, r0"];
+  2 -> 3 [label="mov64 r0, 7"];
+  3 -> 4 [label="rsh64 r1, 32"];
+  4 -> 5 [label="mov64 r3, 1000001"];
+  5 -> 6 [label="mov64 r2, r1"];
+  6 -> 9 [label="jgt r3, r1"];
+  6 -> 7 [label="jle r3, r1"];
+  7 -> 8 [label="mul64 r0, r2"];
+  9 -> 10 [label="mov64 r0, 8"];
+  10 -> 11 [label="mov64 r2, r1"];
+  11 -> 12 [label="mul64 r2, 10"];
+  12 -> 7 [label="jgt r1, 100000"];
+  12 -> 13 [label="jle r1, 100000"];
+  13 -> 14 [label="mov64 r0, 9"];
+  14 -> 15 [label="mov64 r2, r1"];
+  15 -> 16 [label="mul64 r2, 100"];
+  16 -> 7 [label="jgt r1, 10000"];
+  16 -> 17 [label="jle r1, 10000"];
+  17 -> 18 [label="mul64 r1, 1000"];
+  18 -> 19 [label="mov64 r0, r1"];
+  19 -> 8 [label="jmp"];
+6 [shape=diamond];
+8 [style="rounded,filled",fillcolor=grey];
+12 [shape=diamond];
+16 [shape=diamond];
+}

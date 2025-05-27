@@ -391,6 +391,9 @@ wideningState = zipWith combine
   where
     combine (reg, itv1) (_, itv2) = (reg, wideningInterval itv1 itv2)
 
+wideningMemory :: ItvMemory -> ItvMemory -> ItvMemory
+wideningMemory = Map.intersectionWith wideningInterval
+
 -- -- Performs narrowing operation in two intervals.
 -- narrowingInterval :: Itv -> Itv -> Itv
 -- narrowingInterval _ EmptyItv = EmptyItv
@@ -414,10 +417,12 @@ intervalAnalysis eq initialStateItv = fixpointItvAnalysis eqList state memory 1
 -- Perform fixpoint computation for the analysis.
 fixpointItvAnalysis :: [(Label, [(Label, Stmt)])] -> [ItvState] -> ItvMemory -> Int -> ([ItvState], ItvMemory)
 fixpointItvAnalysis eq state mem i =
-    if state == newState && mem == newMem then (newState, newMem) else fixpointItvAnalysis eq newState newMem i'
+    if state == newState && mem == newMem' then (newState, newMem') else fixpointItvAnalysis eq newState newMem' i'
         where 
             (newState, newMem) = foldl (updateItvState i) (state, mem) eq 
+            newMem' = if i `mod` 100 == 0 then wideningMemory mem newMem else newMem
             i' = i + 1
+
 
 -- This function updates the state of a program point after it is analyzed.
 updateItvState :: Int -> ([ItvState], ItvMemory) -> (Label, [(Label, Stmt)]) -> ([ItvState], ItvMemory)

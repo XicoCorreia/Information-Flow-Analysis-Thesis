@@ -55,7 +55,7 @@ initialStateItv = [
     (Reg 0, EmptyItv), (Reg 1, Itv (Finite 0, Finite 5)), (Reg 2, EmptyItv), 
     (Reg 3, EmptyItv), (Reg 4, EmptyItv), (Reg 5, EmptyItv), 
     (Reg 6, EmptyItv), (Reg 7, EmptyItv), (Reg 8, EmptyItv), 
-    (Reg 9, EmptyItv), (Reg 10, Itv (Finite 4, Finite 8))]
+    (Reg 9, EmptyItv), (Reg 10, Itv (Finite 59, Finite 59))]
 
 ------------------- Perform analysis and generate dotfile with cfg ------------------------
 main :: IO ()
