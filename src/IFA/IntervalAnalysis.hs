@@ -632,15 +632,15 @@ updateMemory me a b = updateMemory' me (normalizeInterval a) (normalizeInterval 
   where 
     updateMemory' :: ItvMemory -> Itv -> Itv -> ItvMemory
     updateMemory' mem _ (EmptyItv) = mem 
-    updateMemory' mem value (Itv (NegInfinity, PosInfinity)) = foldl (\m i -> Map.insert i value m) mem [0..512]
+    updateMemory' mem value (Itv (NegInfinity, PosInfinity)) = foldl (\m i -> Map.insert i value m) mem [0..511]
     updateMemory' mem value (Itv (NegInfinity, (Finite y))) = 
-      if y < 0 
-        then mem 
+      if y <= 0 
+        then Map.insert y value mem
         else foldl (\m i -> Map.insert i value m) mem [0..y] 
     updateMemory' mem value (Itv ((Finite x), PosInfinity)) = 
-      if x < 512
-          then foldl (\m i -> Map.insert i value m) mem [x..512] 
-          else mem
+      if x < 511
+          then foldl (\m i -> Map.insert i value m) mem [x..511] 
+          else Map.insert x value mem
     updateMemory' mem value (Itv ((Finite x), (Finite y))) = foldl (\m i -> Map.insert i value m) mem [x..y] 
     updateMemory' _ value x = error $ "It shouldnt reach here: " ++ (show value) ++ " " ++ (show x) -- Just to avoid non-exhaustive pattern
 
@@ -653,21 +653,21 @@ getMemoryInterval me a = getMemoryInterval' me (normalizeInterval a)
     getMemoryInterval' _ EmptyItv = EmptyItv
     getMemoryInterval' mem (Itv (NegInfinity, PosInfinity)) = itv
       where
-        intervals = mapMaybe (`Map.lookup` mem) [0..512]
+        intervals = mapMaybe (`Map.lookup` mem) [0..511]
         itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
     getMemoryInterval' mem (Itv (NegInfinity, (Finite y))) = itv
       where
         intervals =   
-          if y < 0 
-            then [EmptyItv]
+          if y <= 0 
+            then mapMaybe (`Map.lookup` mem) [y] 
             else mapMaybe (`Map.lookup` mem) [0..y] 
         itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
     getMemoryInterval' mem (Itv ((Finite x), PosInfinity)) = itv
         where
           intervals =   
-            if x < 512
-                then mapMaybe (`Map.lookup` mem) [x..512] 
-                else [EmptyItv]
+            if x < 511
+                then mapMaybe (`Map.lookup` mem) [x..511] 
+                else mapMaybe (`Map.lookup` mem) [x] 
           itv = normalizeInterval $ Itv (findLowerBound intervals, findUpperBound intervals)
     getMemoryInterval' mem (Itv ((Finite x), (Finite y))) = itv
       where

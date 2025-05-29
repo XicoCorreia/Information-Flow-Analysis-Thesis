@@ -238,8 +238,8 @@ getMemorySecurityLevel mem itvState (R r) off =
 -- possible indexes, taking into account that the memory has 512 cells
 fixInterval :: Itv -> Int -> [Int]
 fixInterval (Itv (NegInfinity, PosInfinity)) _ = [0..511]
-fixInterval (Itv (NegInfinity, Finite x)) off = [0..x+off]
-fixInterval (Itv (Finite x, PosInfinity)) off = [x+off..511]
+fixInterval (Itv (NegInfinity, Finite x)) off = if x+off > 0 then [0..x+off] else [x+off]
+fixInterval (Itv (Finite x, PosInfinity)) off = if x+off < 511 then [x+off..511] else [x+off]
 fixInterval (Itv (Finite x, Finite y)) off = [x+off..y+off]
 fixInterval EmptyItv _ = []
 fixInterval _ _ = error "Interval needs to be normalized"
