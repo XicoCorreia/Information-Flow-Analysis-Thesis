@@ -24,8 +24,8 @@ edge [fontname="monospace"];
   17 -> 18 [label="mul64 r1, 1000"];
   18 -> 19 [label="mov64 r0, r1"];
   19 -> 8 [label="jmp"];
-6 [shape=diamond];
+6 [style="rounded,filled",fillcolor=firebrick4];
 8 [style="rounded,filled",fillcolor=grey];
-12 [shape=diamond];
-16 [shape=diamond];
+12 [style="rounded,filled",fillcolor=firebrick4];
+16 [style="rounded,filled",fillcolor=firebrick4];
 }

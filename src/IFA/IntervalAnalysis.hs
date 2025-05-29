@@ -406,12 +406,20 @@ wideningMemory = Map.intersectionWith wideningInterval
 
 ------------------- Itv Analysis ------------------------
 
+defaultStateItv :: ItvState
+defaultStateItv = [
+    (Reg 0, EmptyItv), (Reg 1, EmptyItv), (Reg 2, EmptyItv), 
+    (Reg 3, EmptyItv), (Reg 4, EmptyItv), (Reg 5, EmptyItv), 
+    (Reg 6, EmptyItv), (Reg 7, EmptyItv), (Reg 8, EmptyItv), 
+    (Reg 9, EmptyItv), (Reg 10, EmptyItv)]
+
+
 -- Perform the interval analysis on a set of equations.
 intervalAnalysis :: Equations -> ItvState -> ([ItvState], ItvMemory)
 intervalAnalysis eq initialStateItv = fixpointItvAnalysis eqList state memory 1
     where
         eqList = Map.toList eq 
-        state = replicate (length eqList) initialStateItv
+        state = initialStateItv : replicate (length eqList) defaultStateItv
         memory = Map.fromList [(i, EmptyItv) | i <- [0..511]]
 
 -- Perform fixpoint computation for the analysis.
