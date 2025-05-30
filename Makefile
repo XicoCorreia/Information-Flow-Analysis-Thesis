@@ -96,6 +96,7 @@ clean-graphs:
 clean:
 	cabal clean
 	rm -r examples/graphs/*
+	rm -r ebpfPrograms/graphs/*
 	rm -r ebpfPrograms/*.bin
 	rm -r ebpfPrograms/*.o
 	rm -r ebpfPrograms/*.txt
