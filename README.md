@@ -1,13 +1,19 @@
 eBPF Information Flow Analysis
 =======================
 
-## Synthetic Tests
+Cabal test
+-------------
+Run ``` cabal test ``` to verify the analysis correctness using the synthetic programs 
+against the expected results.
+
+Synthetic Tests
+-------------
 To run all the synthetic tests with the information flow analysis, run the command:
 
 ```
 make run-synthetic-tests SECRET_RS=[registers]
 ```
-Note: The list [registers] should be written in the form: "r0 r1 r2"
+Note: The list [registers] should be written in the form: "r0 r1 r2".
 
 To run a specific test with the information flow analysis, run the command:
 
