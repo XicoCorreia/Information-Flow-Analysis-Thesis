@@ -1,28 +1,58 @@
 eBPF Information Flow Analysis
 =======================
-To run all the tests with the information flow analysis, run the make file:
+
+## Synthetic Tests
+To run all the synthetic tests with the information flow analysis, run the command:
 
 ```
-make run-tests SECRET_REGISTERS=[registers]
+make run-synthetic-tests SECRET_RS=[registers]
 ```
+Note: The list [registers] should be written in the form: "r0 r1 r2"
+
 To run a specific test with the information flow analysis, run the command:
 
 ```
-make run-test EXAMPLE_NAME=<testname> SECRET_REGISTERS=[registers]
+make run-one-synthetic-test TEST_NAME=<testname> SECRET_RS=[registers]
 ```
-Important to note that <testname> should be without the .asm extenstion.
+Note: Important to note that <testname> should be without the .asm extenstion.
 
-The CFG graphs will be created in the directory graphs/ with the same name as the test. 
-To run cabal clean and remove all the created graphs and dot files run:
+### Example
+Run the test ifStatement.asm with r1 and r2 as the secret registers:
+
+```
+make run-one-synthetic-test TEST_NAME=ifStatement SECRET_RS="r1 r2"
+```
+
+eBPF Tests
+-------------
+To run a specific eBPF tests with the information flow analysis, run the command:
+
+```
+make run-one-ebpf-test EBPF_PROG=<testname> SECRET_RS=[registers]
+```
+
+CFG
+-------------
+The CFG graphs will be created in the directory examples/graphs/ with the same name as the test. 
+
+Clean Project
+-------------
+To run cabal clean, remove all the created graphs and dot files run:
 
 ```
 make clean
 ```
 
-Visualise the CFG using cabal
+To only remove the graphs, run the command:
+
+```
+make clean-graphs
+```
+
+Run the program using cabal
 -----------------
-To make a `dot` file of the CFG for an eBPF assembler file, say
-`examples/add.asm`, run the command:
+To make a `dot` file of the CFG for an eBPF assembler file and execute
+the analysis, run the command:
 
 ```
 cabal run ebpf-cfg -- examples/<testname>.asm <dotfilename>.dot
@@ -33,12 +63,4 @@ To make a PDF out of the `dot` file run the command (requires
 
 ```
 dot -Tpdf <dotfilename>.dot -o <pdfname>.pdf
-```
-
-Example
--------------
-Run the test ifStatement.asm with r1 and r2 as the secret registers:
-
-```
-make run-test EXAMPLE_NAME=ifStatement SECRET_REGISTERS=r1 r2
 ```
