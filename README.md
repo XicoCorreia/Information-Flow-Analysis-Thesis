@@ -20,6 +20,7 @@ To run a specific test with the information flow analysis, run the command:
 make run-one-synthetic-test TEST_NAME=<testname> SECRET_RS=[registers]
 ```
 Note: Important to note that <testname> should be without the .asm extenstion.
+
 Note: The list [registers] should be written in the form: "r0 r1 r2".
 
 ### Example
