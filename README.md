@@ -13,7 +13,6 @@ To run all the synthetic tests with the information flow analysis, run the comma
 ```
 make run-synthetic-tests SECRET_RS=[registers]
 ```
-Note: The list [registers] should be written in the form: "r0 r1 r2".
 
 To run a specific test with the information flow analysis, run the command:
 
@@ -21,6 +20,7 @@ To run a specific test with the information flow analysis, run the command:
 make run-one-synthetic-test TEST_NAME=<testname> SECRET_RS=[registers]
 ```
 Note: Important to note that <testname> should be without the .asm extenstion.
+Note: The list [registers] should be written in the form: "r0 r1 r2".
 
 ### Example
 Run the test ifStatement.asm with r1 and r2 as the secret registers:
