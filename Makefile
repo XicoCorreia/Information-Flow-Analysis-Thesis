@@ -80,7 +80,6 @@ run-ebpf-decoder:
 ### Cleanup extra files
 	rm ebpfPrograms/opcodesFiltered.txt
 	rm -r ebpfPrograms/*.bin
-	rm -r ebpfPrograms/basePrograms/*.o
 
 
 # Remove a loaded ebpf program from the bpf environment
