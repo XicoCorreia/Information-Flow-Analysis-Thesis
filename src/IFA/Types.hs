@@ -6,7 +6,7 @@ import Ebpf.Asm
 
 ------------------- CFG Types ------------------------
 data Trans =
-    NonCF Instruction  -- No jumps, or exit
+    NonCF Instruction
   | Unconditional
   | Assert Jcmp Reg RegImm
   deriving (Show, Eq, Ord)
@@ -114,4 +114,5 @@ data Itv =
 -- State that associates a register with an interval.
 type ItvState = [(Reg, Itv)]
 
+-- Memory that maps an interval to each index
 type ItvMemory = Map.Map Int Itv

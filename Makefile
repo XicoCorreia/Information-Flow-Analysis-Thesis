@@ -14,11 +14,11 @@ TESTS = doWhile \
 		memoryOpLoop \
 		largeMemoryIndex \
 
-TEST_NAME = example
+TEST_NAME = doWhile
 SECRET_RS = r1
 
-EBPF_PROG = example
-EBPF_FUN = ex
+EBPF_PROG = ifProgram
+EBPF_FUN = ite
 
 # Default target
 all: cabalTest
