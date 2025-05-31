@@ -60,6 +60,8 @@ load-and-attach-ebpf-program:
 	sudo bpftool prog show name $(EBPF_FUN)
 ### Verify if it is printing
 	#sudo cat /sys/kernel/debug/tracing/trace_pipe 
+### Cleanup extra files
+	rm -r ebpfPrograms/basePrograms/*.o
 
 # Use ebpf-tools to decode a .c ebpf program into assembly
 run-ebpf-decoder:
@@ -80,6 +82,7 @@ run-ebpf-decoder:
 ### Cleanup extra files
 	rm ebpfPrograms/opcodesFiltered.txt
 	rm -r ebpfPrograms/*.bin
+	rm -r ebpfPrograms/basePrograms/*.o
 
 
 # Remove a loaded ebpf program from the bpf environment
@@ -95,6 +98,5 @@ clean-graphs:
 clean:
 	cabal clean
 	rm -r examples/graphs/*
-	rm -r ebpfPrograms/basePrograms/*.o
 	rm -r ebpfPrograms/graphs/*
 	rm -r ebpfPrograms/*.txt
