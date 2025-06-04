@@ -1,0 +1,14 @@
+digraph cfg { 
+node [fontname="monospace"];
+node [shape=box];
+edge [fontname="monospace"];
+  0 -> 1 [label="mov64 r0, 1"];
+  1 -> 2 [label="mul64 r0, 2"];
+  2 -> 3 [label="sub64 r1, 1"];
+  3 -> 1 [label="jge r1, 2"];
+  3 -> 4 [label="jlt r1, 2"];
+1 [style=filled,fillcolor=firebrick1];
+2 [style=filled,fillcolor=firebrick1];
+3 [style="rounded,filled",fillcolor=firebrick4];
+4 [style="rounded,filled",fillcolor=grey];
+}
